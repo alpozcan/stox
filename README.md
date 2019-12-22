@@ -26,7 +26,7 @@ Notable features:
 
 ## The Data
 
-Stox comes with batteries included. The provided end-of-day time series data covers the stocks listed in ASX All Ordinaries index for a period between 2003-03-01 and 2019-10-25.
+Stox comes with batteries included. The provided end-of-day time series data covers the stocks listed in ASX All Ordinaries index for a period between 2002-10-01 and 2019-10-25.
 
 Three sources for various types of data are provided in the data/ subdirectory:
 
