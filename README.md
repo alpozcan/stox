@@ -55,7 +55,7 @@ optional arguments:
   -h, --help           show this help message and exit
   --ticker TICKER      single ticker code, or _MOCK_EASY or _MOCK_HARD for mock tests
   --index INDEX        one of the keys of stock indices as defined in data/indices.yml, to populate the dataset with. Default: XAO
-  --ratio RATIO        denominator of train/test split ratio. Default is 4, meaning a 75/25 percent train/test split.
+  --ratio RATIO        denominator of train/test split ratio. Default is 5, meaning a 80/20 percent train/test split.
   --size SIZE          Number of estimator trees to build. Default: 240.
   --seed SEED          Seed for initialising the model weights with
   --verbose VERBOSE    Integer greater than zero. Greater this number, more info is printed during run. Default: 1.
