@@ -22,14 +22,11 @@ import numpy as np
 import pandas as pd
 import talib as ta
 from talib import abstract
-from multiprocessing import Pool
+import multiprocessing
 from lib import market, mock
 
-MP = 8 # number of threads for multithreaded processing of multiple tickers
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
-DB_HOST = 'ubuntu'
-DB_SCHEMA = 'stox'
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
@@ -182,7 +179,7 @@ class DataSet:
 
     def multi_ts_data(self):
         """ Multiprocessing wrapper for quickly reading data for multiple tickers """
-        pool = Pool(MP)
+        pool = multiprocessing.Pool(multiprocessing.cpu_count())
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
         
         # convert to categorical types on applicable columns

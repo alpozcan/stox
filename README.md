@@ -10,7 +10,7 @@ Notable features:
 
 * 14 different technical indicators applied across different rolling windows of past data,
 
-* Simple outlier detection and filtering,
+* Outlier detection and filtering,
 
 * A scoring system based on the predicted price change and prediction confidence per ticker,
 
@@ -38,7 +38,7 @@ Three sources for various types of data are provided in the data/ subdirectory:
 
 ## Sampling and Prediction
 
-By default, the daily time series data is resampled to weekly. The last work day of the week depends on the week day at runtime, i.e. if you run stox on 21 Oct 2019, with a lookforward value of one (default), the predictions will be for the 28 OCt 2019 (one week into the future).
+By default, the daily time series data is resampled to weekly. The last work day of the week depends on the week day at runtime, i.e. if it's run on 21 Oct 2019, with a lookforward value of one (default), the predictions will be for the 28 Oct 2019 - one week into the future.
 
 Passing in `--resample no` will turn off resampling. Note that this will increase the memory requirement greatly since there will be many more samples at daily frequency than the default resampling frequency of weekly.
 
@@ -66,7 +66,7 @@ optional arguments:
 
 ## Predictions and Performance Metrics
 
-A table of prediction results will be printed at the end, per ticker. The results are sorted based on 'potential', where a high value of this metric can be interpreted as BUY, and a low, negive value as SELL.
+A table of per ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negive value as a SELL signal.
 
 Result Attributes:
 
@@ -90,13 +90,13 @@ Result Attributes:
 
 Full results will be saved in a date stamped CSV file under `results/`.
 
-In addition to the per-ticker results presented in the table, overall volatility, error and alpha metrics will also be printed and are computed based on ALL test samples. The `alpha` score is the most important single metric for evaluating the model performance, and usually comes in at around ~35 with the included data.
+In addition to the per-ticker results presented in the table, overall volatility, error and alpha metrics will also be printed. These are computed based on ALL test samples. The `alpha` score is the single most important metric for evaluating the model performance, and usually comes in at around ~34 with the included data.
 
-WIth the provided data and using the default configuration, a run should not take more than a few minutes on a reasonably modern CPU. On a 4 core / 8 thread Intel i5 8259u, it takes about 2 minutes.
+WIth the provided data and using the default configuration, a run should not take more than a few minutes on a reasonably modern CPU. It takes about 2 minutes on a 4 core / 8 thread Intel i5 8259u.
 
 ## Mock Testing with Synthetic Data
 
-It is possible to run stox with using mock data generated at runtime via special ticker codes passed as arguments:
+It is possible to run Stox with mock data generated at runtime via special ticker codes passed as arguments:
 
 * `--ticker _MOCK_EASY` : Monotonous data that is very predictable. Should result in an alpha score of ~2600.
 
