@@ -76,9 +76,9 @@ Result Attributes:
 
 * `prediction` : The predicted percentage change for the ticker code.
 
-* `volatility` : Average change in price based on all samples.
+* `volatility` : Average change in price based on all test samples.
 
-* `MAE` : Mean Absolute Error against test data.
+* `MAE` : Mean Absolute Error against test samples.
 
 * `alpha` : `volatility / MAE`
 
