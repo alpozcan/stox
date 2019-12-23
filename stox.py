@@ -40,7 +40,7 @@ parser.add_argument('--seed', default=6, help='Seed for initialising the model w
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
 parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
-parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' for daily, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
+parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 
 INDEX = parser.parse_args().index
 TEST_RATIO = 1 / int(parser.parse_args().ratio)

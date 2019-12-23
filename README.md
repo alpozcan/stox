@@ -38,7 +38,7 @@ Three sources for various types of data are provided in the data/ subdirectory:
 
 ## Sampling and Prediction
 
-By default, the daily time series data is resampled to weekly. The last work day of the week depends on the week day at runtime, i.e. if it's run on 21 Oct 2019, with a lookforward value of one (default), the predictions will be for the 28 Oct 2019 - one week into the future.
+By default, the daily time series data is resampled to weekly. In this case, the start day of the week is the current day of week at runtime, with weekend days corresponding to Friday. With weekly resampling, if Stox is run on 21 Oct 2019, with a lookforward value of one (default), the predictions will be for the 28 Oct 2019 - one week into the future.
 
 Passing in `--resample no` will turn off resampling. Note that this will increase the memory requirement greatly since there will be many more samples at daily frequency than the default resampling frequency of weekly.
 
@@ -61,12 +61,12 @@ optional arguments:
   --verbose VERBOSE    Integer greater than zero. Greater this number, more info is printed during run. Default: 1.
   --lookback LOOKBACK  The number of periods for look-back features. Default: 6.
   --lookfwd LOOKFWD    The number of periods into the future to predict at. Default: 1.
-  --resample RESAMPLE  Period size. 'no' for daily, or any pandas-format resampling specification. Default is weekly resampling on the current workday
+  --resample RESAMPLE  Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday
 ```
 
 ## Predictions and Performance Metrics
 
-A table of per ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negive value as a SELL signal.
+A table of per-ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negive value as a SELL signal.
 
 Result Attributes:
 
@@ -78,7 +78,7 @@ Result Attributes:
 
 * `MAE` : Mean Absolute Error against test data.
 
-* `alpha` : `MAE / volatility`
+* `alpha` : `volatility / MAE`
 
 * `var_score`: Explained variance score.
 
