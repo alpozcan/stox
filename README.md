@@ -1,4 +1,4 @@
-# stox
+# Stox
 
 Stox is a simple machine learning system for making short term future predictions on financial time series data.
 
@@ -68,6 +68,8 @@ optional arguments:
 
 A table of per-ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negive value as a SELL signal.
 
+[Here's a results example](https://github.com/alpozcan/stox/blob/master/results/2019-12-23-12-30-19.csv) that was produced using `--resample 'W-THU'`.
+
 Result Attributes:
 
 * `predicted_at` : The most recent sample of data for the ticker that was used for prediction.
@@ -118,7 +120,15 @@ It is possible to run Stox with mock data generated at runtime via special ticke
 
 * Find out why using the close price directly for `d['price']` sinks the scores!
 
-* Implement a more efficient way to store lookback features (i.e. day -1, day -2 etc). Currently we use a 'ribbon' of trailing features for each LOOKBACK number of past periods, which means there's a lot of duplication in the data set. Similarly for the 'market' features that get tacked on alongside every ticker sample.
+* Implement a more efficient way to store lookback features (i.e. day -1, day -2 etc). Currently we use a 'ribbon' of trailing features for each LOOKBACK number of past periods, which means there's a lot of duplication in the data set. Similarly for the 'market' features that get tacked on alongside every ticker sample. Perhaps a proper implementation of an LSTM or GRU should fit well here.
+
+## Things Tried That Didn't Work Quite Well
+
+* A ‘plug-in’ model architecture supporting Neural Networks (MLP, LSTM) via [Keras](https://github.com/keras-team/keras) + [TensorFlow](https://github.com/tensorflow/tensorflow)/[Theano](https://github.com/Theano/Theano), several other [scikit-learn algoritms](https://scikit-learn.org/stable/modules/ensemble.html) and [XGBoost](https://github.com/dmlc/xgboost). None of them worked as well as LightGBM so that is what I kept.
+
+* Feature scaling using [several algorithms](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing), and also [normalisation using yeo-johnson power transformer](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html#sklearn.preprocessing.PowerTransformer) in tandem with Keras. With tree-based ensemble algorithms, feature scaling is not needed.
+
+* Various charting functions using the matplotlib library and Pandas’ whisker plots for data exploration.
 
 ## License
 
