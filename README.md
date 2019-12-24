@@ -66,13 +66,13 @@ optional arguments:
 
 ## Predictions and Performance Metrics
 
-A table of per-ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negive value as a SELL signal.
+A table of per-ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negative value as a SELL signal.
 
 [Here's a results example](https://github.com/alpozcan/stox/blob/master/results/2019-12-23-12-30-19.csv) that was produced using `--resample 'W-THU'`.
 
 Result Attributes:
 
-* `predicted_at` : The most recent sample of data for the ticker that was used for prediction.
+* `predicted_at` : The date stamp of the most recent sample of data for the ticker that was used for prediction.
 
 * `prediction` : The predicted percentage change for the ticker code.
 
