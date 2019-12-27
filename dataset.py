@@ -39,9 +39,13 @@ class DataSet:
         self.ta = ta
         self.patterns = patterns
 
-        self.d_market = self.preprocess_ts(pd.read_sql_query(   'SELECT date, open, close FROM `indices` WHERE ticker=\'XAO\' ORDER BY date ASC',
-                                                                'sqlite:///data/stox.db',
-                                                                index_col=['date']))
+        self.d_market = { }
+        self.d_market['AU'] = self.preprocess_ts(pd.read_sql_query( 'SELECT date, open, close FROM `indices` WHERE ticker=\'XAO[AU]\' ORDER BY date ASC',
+                                                                    'sqlite:///data/stox.db',
+                                                                    index_col=['date']))
+        self.d_market['US'] = self.preprocess_ts(pd.read_sql_query( 'SELECT date, open, close FROM `indices` WHERE ticker=\'SPX[US]\' ORDER BY date ASC',
+                                                                    'sqlite:///data/stox.db',
+                                                                    index_col=['date']))
 
         self.multi_ts_data()
 
@@ -105,11 +109,13 @@ class DataSet:
             print('Generating unpredictable data...')
             d_ticker = self.preprocess_ts(mock.generateRandomData())
 
+        country = ticker[ticker.find("[")+1:ticker.find("]")]
+
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
             (d_ticker['pc'], 'spc'),
-            (self.d_market['pc'], 'mpc'),
+            (self.d_market[country]['pc'], 'mpc'),
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
             (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume')

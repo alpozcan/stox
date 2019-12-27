@@ -32,8 +32,8 @@ def sectors():
     return list(companies()['GICS industry group'].unique())
 
 def all_stocks():
-    tickers = pd.Series(data=pd.read_sql_query( 'SELECT DISTINCT ticker FROM `equities` WHERE CHAR_LENGTH(ticker)=3',
-                                                'sqlite:///../data/stox.db',
+    tickers = pd.Series(data=pd.read_sql_query( 'SELECT DISTINCT ticker FROM `equities`',
+                                                'sqlite:///data/stox.db',
                                             )['ticker']
                         ).tolist()
     print(len(tickers), 'tickers')

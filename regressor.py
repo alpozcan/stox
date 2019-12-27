@@ -51,8 +51,11 @@ class Regressor():
             from sklearn.neural_network import MLPRegressor
             self.needs_feature_scaling = True
             self.supports_feature_importance = False
-            self.model = MLPRegressor(  hidden_layer_sizes=( size, int(size / 8) ),
-                                        batch_size=256,
+            self.model = MLPRegressor(  hidden_layer_sizes= (   int(size / 4),
+                                                                int(size / 4),
+                                                                int(size / 8)
+                                                            ),
+                                        batch_size=64,
                                         activation='relu', # logistic, tanh, relu
                                         solver='adam',
                                         alpha=0.01, #default 0.0001

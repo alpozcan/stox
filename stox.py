@@ -34,7 +34,6 @@ timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--ticker', default=None, help='Single ticker code, or _MOCK_EASY or _MOCK_HARD for mock tests')
-parser.add_argument('--index', default='XAO', help='One of the keys of stock indices as defined in data/indices.yml, to populate the dataset with. Default: XAO')
 parser.add_argument('--ratio', default=5, help='Denominator of train/test split ratio. Default is 5, meaning a 80/20 percent train/test split.')
 parser.add_argument('--size', default=240, help='Number of estimator trees to build. Default: 240.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
@@ -44,7 +43,6 @@ parser.add_argument('--lookfwd', default=1, help='The number of periods into the
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
 
-INDEX = parser.parse_args().index
 TEST_RATIO = 1 / int(parser.parse_args().ratio)
 SIZE = int(parser.parse_args().size) # Trees
 SEED = int(parser.parse_args().seed)
@@ -55,7 +53,7 @@ RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
 
 ticker = parser.parse_args().ticker
-tickers = [ticker] if ticker else market.index_participants(index=INDEX)
+tickers = [ticker] if ticker else market.all_stocks()
 
 companies = market.companies() # columns: Company name,ASX code,GICS industry group
 sectors = market.sectors()
@@ -118,18 +116,18 @@ if VERBOSE > 0 and regressor.supports_feature_importance:
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi)
 
-predicted_at = predictors['date'].max() # the latest sample is the one we'll use to predict on
-predicted_for = datetime.timedelta(days=LOOKFWD) if RESAMPLE == 'no' else datetime.timedelta(days=LOOKFWD * 7)
-print('Predicting from', predicted_at, 'for', predicted_at + predicted_for)
-predictors = predictors[predictors['date'] == predicted_at] # drop all older samples as we want to predict only on latest data
-predictors = predictors.drop('date', axis=1).set_index('ticker').sort_index()
+predictors = predictors.set_index('ticker').sort_index()
 
 results = pd.DataFrame()
 for t, p in predictors.groupby(level=0):
+    predicted_at = p['date'].values[0]
+    predictor = p.drop('date', axis=1)
 
     if p.isnull().values.any():
         if VERBOSE > 0:
-            print('Not predicting', t, 'as it had Nan in its predictor')
+            print('Not predicting', t, 'as it has Nan in its predictor')
+            if VERBOSE > 2:
+                print(p)
         continue
 
     try:
@@ -142,8 +140,8 @@ for t, p in predictors.groupby(level=0):
         continue
 
     predictions = model.predict(xT)
-    results.at[t, 'predicted_at'] = predicted_at.strftime('%b%d')
-    results.at[t, 'prediction'] = (model.predict(scaler.transform(p)) if regressor.needs_feature_scaling else model.predict(p))[0]
+    results.at[t, 'predicted_at'] = predicted_at
+    results.at[t, 'prediction'] = (model.predict(scaler.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor))[0]
     results.at[t, 'volatility'] = abs(yT).mean()
     results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
     results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
