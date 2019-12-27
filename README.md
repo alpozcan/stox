@@ -2,7 +2,7 @@
 
 Stox is a simple machine learning system for making short term future predictions on financial time series data.
 
-It uses [LightGBM](https://github.com/microsoft/LightGBM) for a gradient-boosting learner and [TA-Lib](https://github.com/mrjbq7/ta-lib) for technical indicators and chart pattern recognition.
+Various types of regression learners are supperted from [scikit-learn](https://scikit-learn.org) and [LightGBM](https://github.com/microsoft/LightGBM). [TA-Lib](https://github.com/mrjbq7/ta-lib) is used for calculating technical indicators and chart pattern recognition.
 
 Notable features:
 
@@ -48,21 +48,45 @@ There is no hard requirement for the data to be at daily frequency, so for examp
 
 ```
 stox.py [-h] [--ticker TICKER] [--index INDEX] [--ratio RATIO]
-        [--size SIZE] [--seed SEED] [--verbose VERBOSE]
-        [--lookback LOOKBACK] [--lookfwd LOOKFWD] [--resample RESAMPLE]
+               [--size SIZE] [--seed SEED] [--verbose VERBOSE]
+               [--lookback LOOKBACK] [--lookfwd LOOKFWD] [--resample RESAMPLE]
+               [--regressor REGRESSOR]
 
 optional arguments:
-  -h, --help           show this help message and exit
-  --ticker TICKER      single ticker code, or _MOCK_EASY or _MOCK_HARD for mock tests
-  --index INDEX        one of the keys of stock indices as defined in data/indices.yml, to populate the dataset with. Default: XAO
-  --ratio RATIO        denominator of train/test split ratio. Default is 5, meaning a 80/20 percent train/test split.
-  --size SIZE          Number of estimator trees to build. Default: 240.
-  --seed SEED          Seed for initialising the model weights with
-  --verbose VERBOSE    Integer greater than zero. Greater this number, more info is printed during run. Default: 1.
-  --lookback LOOKBACK  The number of periods for look-back features. Default: 6.
-  --lookfwd LOOKFWD    The number of periods into the future to predict at. Default: 1.
-  --resample RESAMPLE  Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday
+  -h, --help            show this help message and exit
+  --ticker TICKER       Single ticker code, or _MOCK_EASY or _MOCK_HARD for
+                        mock tests
+  --index INDEX         One of the keys of stock indices as defined in
+                        data/indices.yml, to populate the dataset with.
+                        Default: XAO
+  --ratio RATIO         Denominator of train/test split ratio. Default is 5,
+                        meaning a 80/20 percent train/test split.
+  --size SIZE           Number of estimator trees to build. Default: 240.
+  --seed SEED           Seed for initialising the model weights with
+  --verbose VERBOSE     Integer greater than zero. Greater this number, more
+                        info is printed during run. Default: 1.
+  --lookback LOOKBACK   The number of periods for look-back features. Default:
+                        6.
+  --lookfwd LOOKFWD     The number of periods into the future to predict at.
+                        Default: 1.
+  --resample RESAMPLE   Period size. 'no' to turn off resampling, or any
+                        pandas-format resampling specification. Default is
+                        weekly resampling on the current workday
+  --regressor REGRESSOR
+                        String alias for the regressor model to use, as
+                        defined in regressor.py. Default: LGB
 ```
+
+### The Regressors
+
+* `LGB`: [LightGBM Regressor](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html)
+
+* `GBR`: [Scikit-learn's Gradient Boosting Regressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html)
+
+* `ETR` : [Extra-Trees](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html)
+
+* `MLP` : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html)
+
 
 ## Predictions and Performance Metrics
 
@@ -122,13 +146,6 @@ It is possible to run Stox with mock data generated at runtime via special ticke
 
 * Implement a more efficient way to store lookback features (i.e. day -1, day -2 etc). Currently we use a 'ribbon' of trailing features for each LOOKBACK number of past periods, which means there's a lot of duplication in the data set. Similarly for the 'market' features that get tacked on alongside every ticker sample. Perhaps a proper implementation of an LSTM or GRU should fit well here.
 
-## Things Tried That Didn't Work Quite Well
-
-* A ‘plug-in’ model architecture supporting Neural Networks (MLP, LSTM) via [Keras](https://github.com/keras-team/keras) + [TensorFlow](https://github.com/tensorflow/tensorflow)/[Theano](https://github.com/Theano/Theano), several other [scikit-learn algoritms](https://scikit-learn.org/stable/modules/ensemble.html) and [XGBoost](https://github.com/dmlc/xgboost). None of them worked as well as LightGBM so that is what I kept.
-
-* Feature scaling using [several algorithms](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.preprocessing), and also [normalisation using yeo-johnson power transformer](https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.PowerTransformer.html#sklearn.preprocessing.PowerTransformer) in tandem with Keras. With tree-based ensemble algorithms, feature scaling is not needed.
-
-* Various charting functions using the matplotlib library and Pandas’ whisker plots for data exploration.
 
 ## License
 
@@ -138,4 +155,4 @@ Stox is Copyright (C) 2019 Gokalp Ozcan.
 
 ## Disclaimer
 
-Stox and the bundled data is provided for educational purposes only, and its predictions alone should not be used in trading of actual money. There is no guarantee on the correctness or applicability of this program; you are responsible for any losses, financial or otherwise.
+Stox and the bundled data is provided for educational purposes only, and its predictions alone should not be used in trading of actual money. There is no guarantee on the correctness or applicability of this program. By using this program, you accept to take full responsibility for any losses, financial or otherwise.
