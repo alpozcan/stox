@@ -55,8 +55,8 @@ REGRESSOR = parser.parse_args().regressor
 ticker = parser.parse_args().ticker
 tickers = [ticker] if ticker else market.all_stocks()
 
-companies = market.companies() # columns: Company name,ASX code,GICS industry group
-sectors = market.sectors()
+# companies = market.companies() # columns: Company name,ASX code,GICS industry group
+# sectors = market.sectors()
 
 ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, resample=RESAMPLE).data
 # ds.to_csv('debug_data.csv', index=True) # Uncomment to dump all features into a CSV file for debugging.
@@ -99,11 +99,8 @@ y_test = pd.concat(tds['y_test'], axis = 0)
 
 print('X_train:', X_train.shape, 'X_test:', X_test.shape, 'y_train:', y_train.shape, 'y_test:', y_test.shape)
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE)
+regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, val_x=X_test, val_y=y_test)
 model = regressor.model
-
-if VERBOSE > 0:
-    print(model)
 
 scaler = MinMaxScaler(feature_range=(-1, 1))
 if regressor.needs_feature_scaling:

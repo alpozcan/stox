@@ -79,6 +79,7 @@ optional arguments:
 
 * `MLP` : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html)
 
+* `KTF` : [Tensorflow via Keras](https://keras.io/scikit-learn-api/)
 
 ## Predictions and Performance Metrics
 

@@ -25,11 +25,11 @@ def index_participants(index):
         indices = yaml.load(file)
     return indices[index]
 
-def companies():
-    return pd.read_csv('data/companies/ASXListedCompanies.csv',skiprows=[0,1], index_col='ASX code')
+# def companies():
+#     return pd.read_csv('data/companies/ASXListedCompanies.csv',skiprows=[0,1], index_col='ASX code')
 
-def sectors():
-    return list(companies()['GICS industry group'].unique())
+# def sectors():
+#     return list(companies()['GICS industry group'].unique())
 
 def all_stocks():
     tickers = pd.Series(data=pd.read_sql_query( 'SELECT DISTINCT ticker FROM `equities`',
