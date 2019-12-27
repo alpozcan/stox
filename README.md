@@ -26,15 +26,7 @@ Notable features:
 
 ## The Data
 
-Stox comes with batteries included. The provided end-of-day time series data covers the stocks listed in ASX All Ordinaries index for a period between 2002-10-01 and 2019-10-25.
-
-Three sources for various types of data are provided in the data/ subdirectory:
-
-* `stox.db` : SQLite database of the daily time series data in row format `ticker, date, open, high, low, close, volume`
-
-* `indices.yml` : Defines groups of ticker codes to use for training and prediction.
-
-* `companies/ASXListedCompanies.csv` : List of all ASX listed companies as [published by ASX](https://www.asx.com.au/asx/research/listedCompanies.do) with company name and sector information. This is not used currently.
+Stox comes with batteries included. `stox.db` is an SQLite database of the daily time series data in row format `ticker, date, open, high, low, close, volume`
 
 ## Sampling and Prediction
 

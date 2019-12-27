@@ -1,4 +1,3 @@
-data/*.db
 results/*.csv
 
 # Byte-compiled / optimized / DLL files
