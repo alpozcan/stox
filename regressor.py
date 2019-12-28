@@ -28,7 +28,6 @@ class Regressor():
 
         self.model = self.init_model(kind)
 
-
     def init_model(self, kind):
         if kind == 'LGB':
             from lightgbm import LGBMRegressor
@@ -63,7 +62,7 @@ class Regressor():
                                         batch_size=64,
                                         activation='relu', # logistic, tanh, relu
                                         solver='adam',
-                                        alpha=0.01, #default 0.0001
+                                        alpha=1e-02, #default 1e-04
                                         validation_fraction=.1,
                                         tol=1e-05, # default: 1e-04
                                         learning_rate_init=1e-05, # default 1e-03
@@ -72,6 +71,12 @@ class Regressor():
                                         early_stopping=True,
                                         learning_rate='constant', # also 'adaptive' (sgd only)
                                         max_iter=1000)
+
+            self.param_grid = [{
+                'alpha': [ 1e-05, 1e-04, 1e-03, 1e-02, 1e-01 ],
+                'tol': [ 1e-05, 1e-04, 1e-03 ],
+                'learning_rate_init': [ 1e-05, 1e-04, 1e-03 ],
+            }]
 
         elif kind == 'KTF':
             from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
@@ -93,7 +98,7 @@ class Regressor():
                                         validation_data=(self.val_x, self.val_y)
                                         )
             )
-        
+
         else:
             print(f"Unrecognised regressor type '{kind}'")
 
