@@ -104,10 +104,21 @@ print('X_train:', X_train.shape, 'X_test:', X_test.shape, 'y_train:', y_train.sh
 regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, val_x=X_test, val_y=y_test)
 model = regressor.model
 
-scaler = MinMaxScaler(feature_range=(-1, 1))
 if regressor.needs_feature_scaling:
-    scaler.fit(X_train)
-    model.fit(scaler.transform(X_train), y_train)
+    from sklearn.compose import ColumnTransformer
+    from sklearn.preprocessing import PowerTransformer, MinMaxScaler, OneHotEncoder
+    from sklearn.pipeline import Pipeline
+
+    num_scaler = Pipeline([
+        ('transformer', PowerTransformer(method='yeo-johnson', standardize=True)),
+        ('scaler', MinMaxScaler(feature_range=(-1,1))) ])
+
+    preprocessor = ColumnTransformer(transformers=[
+        ('numerical', num_scaler, X_train.select_dtypes(include=['float64']).columns ),
+        ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ])
+
+    preprocessor.fit(X_train)
+    model.fit(preprocessor.transform(X_train), y_train)
 else:
     model.fit(X_train, y_train)
 
@@ -133,14 +144,14 @@ for t, p in predictors.groupby(level=0):
         xt, yt, xT, yT = X_train.xs(t, level=1, drop_level=False), y_train.xs(t, level=1, drop_level=False), X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
 
         if regressor.needs_feature_scaling:
-            xt = scaler.transform(xt)
-            xT = scaler.transform(xT)
+            xt = preprocessor.transform(xt)
+            xT = preprocessor.transform(xT)
     except KeyError:
         continue
 
     predictions = model.predict(xT)
     results.at[t, 'predicted_at'] = predicted_at
-    results.at[t, 'prediction'] = (model.predict(scaler.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor))[0]
+    results.at[t, 'prediction'] = (model.predict(preprocessor.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor))[0]
     results.at[t, 'volatility'] = abs(yT).mean()
     results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
     results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
@@ -155,7 +166,7 @@ print(results, results.describe(), sep='\n')
 results.to_csv(f'results/{timestamp}.csv')
 
 # print overall results
-overall_predictions = model.predict(scaler.transform(X_test)) if regressor.needs_feature_scaling else model.predict(X_test)
+overall_predictions = model.predict(preprocessor.transform(X_test)) if regressor.needs_feature_scaling else model.predict(X_test)
 overall_volatility = round(abs(y_test).mean(), 4)
 overall_error = round(mean_absolute_error(y_test, overall_predictions), 4)
 print('Overall volatility:', overall_volatility, ', error:', overall_error, ', alpha:', round((overall_volatility / overall_error - 1) * 100, 2))
