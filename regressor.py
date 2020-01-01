@@ -4,7 +4,7 @@
 
 # Stox, a prediction engine for financial time series data
 
-# Copyright (C) 2019 Gokalp Ozcan
+# Copyright (C) 2017-2020 Gokalp Ozcan
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,22 +61,16 @@ class Regressor():
                                                         ),
                                         batch_size=64,
                                         activation='relu', # logistic, tanh, relu
-                                        solver='adam',
-                                        alpha=1e-02, #default 1e-04
+                                        solver='sgd',
+                                        alpha=1e-03, # default 1e-04
                                         validation_fraction=.1,
                                         tol=1e-05, # default: 1e-04
-                                        learning_rate_init=1e-05, # default 1e-03
+                                        learning_rate_init=5e-04, # default 1e-03
                                         random_state=self.seed,
                                         verbose=self.verbosity,
                                         early_stopping=True,
-                                        learning_rate='constant', # also 'adaptive' (sgd only)
+                                        learning_rate='adaptive', # also 'adaptive' (sgd only)
                                         max_iter=1000)
-
-            self.param_grid = [{
-                'alpha': [ 1e-05, 1e-04, 1e-03, 1e-02, 1e-01 ],
-                'tol': [ 1e-05, 1e-04, 1e-03 ],
-                'learning_rate_init': [ 1e-05, 1e-04, 1e-03 ],
-            }]
 
         elif kind == 'KTF':
             from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
