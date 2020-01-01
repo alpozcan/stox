@@ -53,7 +53,10 @@ optional arguments:
                         Default: XAO
   --ratio RATIO         Denominator of train/test split ratio. Default is 5,
                         meaning a 80/20 percent train/test split.
-  --size SIZE           Number of estimator trees to build. Default: 240.
+  --size SIZE           Model size. For tree-based regressors it is the number
+                        of estimator trees to build, for neural nets it is
+                        used as a coefficient for the layer widths. Default:
+                        256.
   --seed SEED           Seed for initialising the model weights with
   --verbose VERBOSE     Integer greater than zero. Greater this number, more
                         info is printed during run. Default: 1.
