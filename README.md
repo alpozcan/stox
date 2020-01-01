@@ -26,11 +26,11 @@ Notable features:
 
 ## The Data
 
-Stox comes with batteries included. `stox.db` is an SQLite database of the daily time series data in row format `ticker, date, open, high, low, close, volume`
+Stox comes with batteries included. `stox.db` is an SQLite database containing approximately 20 years of daily time series data on S&P 500 and ASX All Ordinaries constituents. Columns: `ticker, date, open, high, low, close, volume`.
 
 ## Sampling and Prediction
 
-By default, the daily time series data is resampled to weekly. In this case, the start day of the week is the current day of week at runtime, with weekend days corresponding to Friday. With weekly resampling, if Stox is run on 21 Oct 2019, with a lookforward value of one (default), the predictions will be for the 28 Oct 2019 - one week into the future.
+By default, the daily time series data is resampled to weekly, where the start day of the week is taken to be the current day of week at runtime, with weekend days corresponding to Friday. With weekly resampling, if Stox is run on 21 Oct with a lookforward value of one (default) and there is up-to-date data in the database, the predictions will be for the 28 Oct - one week into the future.
 
 Passing in `--resample no` will turn off resampling. Note that this will increase the memory requirement greatly since there will be many more samples at daily frequency than the default resampling frequency of weekly.
 
@@ -61,6 +61,10 @@ optional arguments:
                         6.
   --lookfwd LOOKFWD     The number of periods into the future to predict at.
                         Default: 1.
+  --startyear STARTYEAR
+                        Only use samples newer than the start of the year
+                        given. Can be used for reducing the dataset size where
+                        there are memory/time constraints. Default: 1970.
   --resample RESAMPLE   Period size. 'no' to turn off resampling, or any
                         pandas-format resampling specification. Default is
                         weekly resampling on the current workday
@@ -109,7 +113,7 @@ Result Attributes:
 
 Full results will be saved in a date stamped CSV file under `results/`.
 
-In addition to the per-ticker results presented in the table, overall volatility, error and alpha metrics will also be printed. These are computed based on ALL test samples. The `alpha` score is the single most important metric for evaluating the model performance, and usually comes in at around ~34 with the included data.
+In addition to the per-ticker results presented in the table, overall volatility, error and alpha metrics will also be printed. These are computed based on ALL test samples. The `alpha` score is the single most important metric for evaluating the model performance, and usually comes in at around ~37 with the included data at default settings.
 
 WIth the provided data and using the default configuration, a run should not take more than a few minutes on a reasonably modern CPU. It takes about 2 minutes on a 4 core / 8 thread Intel i5 8259u.
 
@@ -139,12 +143,11 @@ It is possible to run Stox with mock data generated at runtime via special ticke
 
 * Implement a more efficient way to store lookback features (i.e. day -1, day -2 etc). Currently we use a 'ribbon' of trailing features for each LOOKBACK number of past periods, which means there's a lot of duplication in the data set. Similarly for the 'market' features that get tacked on alongside every ticker sample. Perhaps a proper implementation of an LSTM or GRU should fit well here.
 
-
 ## License
 
-This software is licensed under GNU GENERAL PUBLIC LICENSE, Version 3. Check the LICENSE file for the full license text. 
+This software is licensed under GNU GENERAL PUBLIC LICENSE, Version 3. Check the LICENSE file for the full license text.
 
-Stox is Copyright (C) 2019 Gokalp Ozcan.
+Stox is Copyright (C) 2017-2020 Gokalp Ozcan.
 
 ## Disclaimer
 

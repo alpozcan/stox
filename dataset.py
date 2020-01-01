@@ -2,7 +2,7 @@
 
 # DataSet class for Stox
 
-# Copyright (C) 2019 Gokalp Ozcan
+# Copyright (C) 2017-2020 Gokalp Ozcan
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,20 +30,31 @@ LOW_OUTLIER = -89 # percentage
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, imputate=True, resample='no', ta=True, patterns=True):
+    def __init__(self, tickers, lookback, lookfwd, start_year=1970, imputate=True, resample='no', ta=True, patterns=True):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
+        self.start_year = start_year
         self.imputate = imputate
         self.resample = resample
         self.ta = ta
         self.patterns = patterns
 
         self.d_market = { }
-        self.d_market['AU'] = self.preprocess_ts(pd.read_sql_query( 'SELECT date, open, close FROM `indices` WHERE ticker=\'XAO[AU]\' ORDER BY date ASC',
+        self.d_market['AU'] = self.preprocess_ts(pd.read_sql_query( f"""
+                                                                    SELECT date, open, close FROM `indices` 
+                                                                    WHERE ticker='XAO[AU]' 
+                                                                    AND date > '{self.start_year}-01-01' 
+                                                                    ORDER BY date ASC
+                                                                    """,
                                                                     'sqlite:///data/stox.db',
                                                                     index_col=['date']))
-        self.d_market['US'] = self.preprocess_ts(pd.read_sql_query( 'SELECT date, open, close FROM `indices` WHERE ticker=\'SPX[US]\' ORDER BY date ASC',
+        self.d_market['US'] = self.preprocess_ts(pd.read_sql_query( f"""
+                                                                    SELECT date, open, close FROM `indices` 
+                                                                    WHERE ticker='SPX[US]' 
+                                                                    AND date > '{self.start_year}-01-01' 
+                                                                    ORDER BY date ASC
+                                                                    """,
                                                                     'sqlite:///data/stox.db',
                                                                     index_col=['date']))
 
@@ -99,9 +110,14 @@ class DataSet:
         """ Fetch time series data for the requested ticker and generate features """
         d_ticker = None
         if not ticker.startswith('_MOCK'):
-            d_ticker = self.preprocess_ts(pd.read_sql_query( f'SELECT * FROM `equities` WHERE ticker=\'{ticker}\' ORDER BY date ASC',
-                                                        'sqlite:///data/stox.db',
-                                                        index_col=['date']))
+            d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
+                                                                SELECT * FROM `equities` 
+                                                                WHERE ticker='{ticker}' 
+                                                                AND date > '{self.start_year}-01-01' 
+                                                                ORDER BY date ASC
+                                                                """,
+                                                                'sqlite:///data/stox.db',
+                                                                index_col=['date']))
         elif ticker == '_MOCK_EASY':
             print('Generating predictable data...')
             d_ticker = self.preprocess_ts(mock.generatePredictableData())

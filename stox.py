@@ -2,7 +2,7 @@
 
 # Stox, a prediction engine for financial time series data
 
-# Copyright (C) 2019 Gokalp Ozcan
+# Copyright (C) 2017-2020 Gokalp Ozcan
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -40,6 +40,7 @@ parser.add_argument('--seed', default=6, help='Seed for initialising the model w
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
 parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
+parser.add_argument('--startyear', default=1970, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1970.')
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
 
@@ -49,6 +50,7 @@ SEED = int(parser.parse_args().seed)
 VERBOSE = int(parser.parse_args().verbose)
 LOOKBACK = int(parser.parse_args().lookback)
 LOOKFWD = int(parser.parse_args().lookfwd)
+START_YEAR = parser.parse_args().startyear
 RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
 
@@ -58,7 +60,7 @@ tickers = [ticker] if ticker else market.all_stocks()
 # companies = market.companies() # columns: Company name,ASX code,GICS industry group
 # sectors = market.sectors()
 
-ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, resample=RESAMPLE).data
+ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, start_year=START_YEAR, resample=RESAMPLE).data
 # ds.to_csv('debug_data.csv', index=True) # Uncomment to dump all features into a CSV file for debugging.
 features = list(ds.columns)
 features.remove('future') # remove the target variable from features, duh
