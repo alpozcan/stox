@@ -16,13 +16,15 @@ Notable features:
 
 * Gap detection, so that only the actual data representing a current company is used, in case the same ticker code had been used for another company in the past.
 
-## Prerequisites
+## Requirements
 
 * Python 3 - most extensively tested on Python 3.6
 
 * TA-Lib C library for successful installation of its Python wrapper. Follow the instructions at [TA-Lib documentation](https://github.com/mrjbq7/ta-lib/blob/master/README.md)
 
 * Python libraries numpy, pandas, TA-Lib, lightgbm, scikit-learn, SQLAlchemy, PyYAML. Install using the included requirements.txt: `pip3 install -r requirements.txt`
+
+* Plenty of RAM. Training on included data with the default settings (LGB regressor) requires about 4 GB of available memory. Other regressors need more. Increasing the lookback period, or using small resampling periods will increase memory requirements exponentially. If you keep getting SegFaults or MemoryErrors, subsampling the data using --startyear will help, but this is obviously not ideal as usually the more data used in training, the better the resulting model can generalise.
 
 ## The Data
 
@@ -78,7 +80,7 @@ optional arguments:
 
 ### The Regressors
 
-* `LGB`: [LightGBM Regressor](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html)
+* `LGB` (default, recommended): [LightGBM Regressor](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html)
 
 * `GBR`: [Scikit-learn's Gradient Boosting Regressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html)
 
@@ -86,7 +88,7 @@ optional arguments:
 
 * `MLP` : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html)
 
-* `KTF` : [Tensorflow via Keras](https://keras.io/scikit-learn-api/)
+* `KTF` : [Tensorflow neural nets via Keras](https://keras.io/scikit-learn-api/)
 
 ## Predictions and Performance Metrics
 
@@ -130,11 +132,11 @@ It is possible to run Stox with mock data generated at runtime via special ticke
 
 ## Contributing
 
-**Pull Requests, suggestions, bug reports and forks would be most welcome and are encouraged.**
+**Pull Requests, suggestions, bug reports and forks would be most welcome and are encouraged. Ideas on feature generation & feature engineering will be especially appreciated**
 
 ## TODO / Feature Wishlist
 
-* In addition to weekly, include daily failures for the last LOOKBACK number of days
+* In addition to weekly, include daily features for the last LOOKBACK number of days
 
 * Add a second pass with all samples used for training
 

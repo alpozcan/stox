@@ -54,6 +54,8 @@ START_YEAR = parser.parse_args().startyear
 RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
 
+MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
+
 ticker = parser.parse_args().ticker
 tickers = [ticker] if ticker else market.all_stocks()
 
@@ -101,7 +103,7 @@ y_test = pd.concat(tds['y_test'], axis = 0)
 
 print('X_train:', X_train.shape, 'X_test:', X_test.shape, 'y_train:', y_train.shape, 'y_test:', y_test.shape)
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, val_x=X_test, val_y=y_test)
+regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE)
 model = regressor.model
 
 if regressor.needs_feature_scaling:
@@ -115,10 +117,15 @@ if regressor.needs_feature_scaling:
 
     preprocessor = ColumnTransformer(transformers=[
         ('numerical', num_scaler, X_train.select_dtypes(include=['float64']).columns ),
-        ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ])
+        ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ],
+        n_jobs=-1)
 
     preprocessor.fit(X_train)
-    model.fit(preprocessor.transform(X_train), y_train)
+
+    n_categoricals = len(preprocessor.named_transformers_['categorical'].get_feature_names())
+    regressor.input_dim = n_categoricals + len(X_train.select_dtypes(include=['float64']).columns)
+
+    model.fit(preprocessor.transform(X_train), y_train.to_numpy())
 else:
     model.fit(X_train, y_train)
 
@@ -135,7 +142,7 @@ for t, p in predictors.groupby(level=0):
 
     if p.isnull().values.any():
         if VERBOSE > 0:
-            print('Not predicting', t, 'as it has Nan in its predictor')
+            print('Not predicting', t, 'as it has NaN in its predictor')
             if VERBOSE > 2:
                 print(p)
         continue
@@ -149,9 +156,14 @@ for t, p in predictors.groupby(level=0):
     except KeyError:
         continue
 
+    if len(xT) < MIN_TEST_SAMPLES:
+        if VERBOSE > 0:
+            print('Not predicting', t, f'as it has less than {MIN_TEST_SAMPLES} test samples')
+        continue
+
     predictions = model.predict(xT)
     results.at[t, 'predicted_at'] = predicted_at
-    results.at[t, 'prediction'] = (model.predict(preprocessor.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor))[0]
+    results.at[t, 'prediction'] = model.predict(preprocessor.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor)[0]
     results.at[t, 'volatility'] = abs(yT).mean()
     results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
     results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
