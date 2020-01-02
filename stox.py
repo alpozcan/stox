@@ -19,6 +19,7 @@
 
 import pandas as pd
 import argparse, datetime, sys
+from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from dataset import DataSet
@@ -125,9 +126,13 @@ if regressor.needs_feature_scaling:
     n_categoricals = len(preprocessor.named_transformers_['categorical'].get_feature_names())
     regressor.input_dim = n_categoricals + len(X_train.select_dtypes(include=['float64']).columns)
 
+    time_start = perf_counter()
     model.fit(preprocessor.transform(X_train), y_train.to_numpy())
 else:
+    time_start = perf_counter()
     model.fit(X_train, y_train)
+
+print('Training took', round(perf_counter() - time_start, 2), 'seconds')
 
 if VERBOSE > 0 and regressor.supports_feature_importance:
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
