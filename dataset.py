@@ -137,7 +137,6 @@ class DataSet:
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
             (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume')
-            # TODO: calculate slopes (linear regression?) for spc, mpc, volume
             ]
 
         d_ticker['ticker'] = ticker # will be used as index
@@ -189,9 +188,13 @@ class DataSet:
 
         for c in ['spc', 'mpc', 'spc_minus_mpc', 'volume']:
             for i in range(2, (self.lookback + 1)):
-                past = d[c].shift(i)
 
+                # past values in a rolling window
+                past = d[c].shift(i)
                 d = pd.concat([d, past.rename(f'past_{c}_{i}')], axis=1)
+
+                # linear regression slopes
+                d = pd.concat([d, (abstract.Function('LINEARREG_SLOPE')(d, price=c, timeperiod=i)).rename(f'slope_{c}_{i}')], axis=1)
 
         # for i in range(2, (self.lookback + 1)):
 
@@ -210,9 +213,9 @@ class DataSet:
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
         
-        # convert to categorical types on applicable columns
-	# TODO: dynamically decide on columns to convert to categorical based on cardinality
-        categoricals = ta.get_function_groups()['Pattern Recognition'] + ['HT_TRENDMODE']
+        # convert to categorical types on applicable columns (those with fewer than 54 cardinality)
+        cardinalities = ds.apply(pd.Series.nunique)
+        categoricals = list(cardinalities[cardinalities < 54].index)
         categorical_type_dict = { c: 'category' for c in categoricals }
         
         self.data = ds.astype(categorical_type_dict).set_index('ticker', append=True).sort_index()
