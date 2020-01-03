@@ -132,9 +132,12 @@ class DataSet:
             (d_ticker['price'], 'price'),
             (d_ticker['pc'], 'spc'),
             (self.d_market[country]['pc'], 'mpc'),
+            (d_ticker['pc'] - self.d_market[country]['pc'], 'spc_minus_mpc'),
+            # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
             (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume')
+            # TODO: calculate slopes (linear regression?) for spc, mpc, volume
             ]
 
         d_ticker['ticker'] = ticker # will be used as index
@@ -184,11 +187,14 @@ class DataSet:
         d.spc.drop(d.spc[d.spc > HIGH_OUTLIER].index, inplace=True)
         d.spc.drop(d.spc[d.spc < LOW_OUTLIER].index, inplace=True)
 
-        for c in ['spc', 'mpc', 'volume']:
+        for c in ['spc', 'mpc', 'spc_minus_mpc', 'volume']:
             for i in range(2, (self.lookback + 1)):
                 past = d[c].shift(i)
 
                 d = pd.concat([d, past.rename(f'past_{c}_{i}')], axis=1)
+
+        # for i in range(2, (self.lookback + 1)):
+
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)
@@ -205,6 +211,7 @@ class DataSet:
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
         
         # convert to categorical types on applicable columns
+	# TODO: dynamically decide on columns to convert to categorical based on cardinality
         categoricals = ta.get_function_groups()['Pattern Recognition'] + ['HT_TRENDMODE']
         categorical_type_dict = { c: 'category' for c in categoricals }
         
