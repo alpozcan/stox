@@ -20,8 +20,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 class Regressor():
-    def __init__(self, kind, size, seed, verbosity):
+    def __init__(self, kind, size, seed, verbosity, X_val, y_val):
         self.kind, self.size, self.seed, self.verbosity = kind, size, seed, verbosity
+        self.X_val, self.y_val = X_val, y_val # validation data
         self.needs_feature_scaling = False
         self.supports_feature_importance = True
 
@@ -88,7 +89,7 @@ class Regressor():
                                         batch_size=128,
                                         verbose=False,
                                         callbacks=callbacks,
-                                        validation_split=.1
+                                        validation_data=(self.X_val, self.y_val)
                                     )
             )
 

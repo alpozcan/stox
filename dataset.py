@@ -149,20 +149,20 @@ class DataSet:
         if self.ta and len(d_ticker) > self.lookback: # most of these are 'rolling window ribbon', i.e. multiple features for a range of periods up to self.lookback
             for i in range(2, (self.lookback + 1)):
                 features.extend([
-                    (abstract.Function('AROONOSC')(d_ticker, timeperiod=i), f'AROONOSC-{i}'),
-                    (abstract.Function('ATR')(d_ticker, timeperiod=i) / d_ticker['price'], f'ATR-{i}'),
-                    (abstract.Function('CORREL')(d_ticker, timeperiod=i), f'CORREL-{i}'),
-                    (abstract.Function('BETA')(d_ticker, timeperiod=i), f'BETA-{i}'),
-                    (abstract.Function('CMO')(d_ticker, timeperiod=i), f'CMO-{i}'),
-                    (abstract.Function('CCI')(d_ticker, timeperiod=i), f'CCI-{i}')
+                    (abstract.Function('AROONOSC')(d_ticker, timeperiod=i), f'AROONOSC_{i}'),
+                    (abstract.Function('ATR')(d_ticker, timeperiod=i) / d_ticker['price'], f'ATR_{i}'),
+                    (abstract.Function('CORREL')(d_ticker, timeperiod=i), f'CORREL_{i}'),
+                    (abstract.Function('BETA')(d_ticker, timeperiod=i), f'BETA_{i}'),
+                    (abstract.Function('CMO')(d_ticker, timeperiod=i), f'CMO_{i}'),
+                    (abstract.Function('CCI')(d_ticker, timeperiod=i), f'CCI_{i}')
                 ])
                 if i >= 6: # these indicators don't work well with very small period sizes
                     features.extend([
-                        (abstract.Function('STOCHF')(d_ticker, fastk_period=i, fastd_period=int(round(i * 3 / 5)))['fastk'], f'STOCHF_K-{i}'),
-                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowd'], f'STOCH_D-{i}'),
-                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowk'], f'STOCH_K-{i}'),
-                        (abstract.Function('ULTOSC')(d_ticker, timeperiod1=int(round(i / 3)), timeperiod2=int(round(i / 2)), timeperiod3=i), f'ULTOSC-{i}'),
-                        (abstract.Function('ADOSC')(d_ticker, fastperiod=int(round(i * 3 / 10)), slowperiod=i), f'ADOSC-{i}')
+                        (abstract.Function('STOCHF')(d_ticker, fastk_period=i, fastd_period=int(round(i * 3 / 5)))['fastk'], f'STOCHF_K_{i}'),
+                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowd'], f'STOCH_D_{i}'),
+                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowk'], f'STOCH_K_{i}'),
+                        (abstract.Function('ULTOSC')(d_ticker, timeperiod1=int(round(i / 3)), timeperiod2=int(round(i / 2)), timeperiod3=i), f'ULTOSC_{i}'),
+                        (abstract.Function('ADOSC')(d_ticker, fastperiod=int(round(i * 3 / 10)), slowperiod=i), f'ADOSC_{i}')
                     ])
 
             features.extend([
@@ -188,7 +188,7 @@ class DataSet:
             for i in range(2, (self.lookback + 1)):
                 past = d[c].shift(i)
 
-                d = pd.concat([d, past.rename(f'past-{c}-{i}')], axis=1)
+                d = pd.concat([d, past.rename(f'past-{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)

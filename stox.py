@@ -18,13 +18,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
-import argparse, datetime, sys
+import argparse, datetime
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from dataset import DataSet
 from regressor import Regressor
-from lib import market
+from lib import market, dump_dataset
 
 pd.set_option('mode.chained_assignment', None)
 
@@ -44,6 +44,7 @@ parser.add_argument('--lookfwd', default=1, help='The number of periods into the
 parser.add_argument('--startyear', default=1970, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1970.')
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
+parser.add_argument('--dump', dest='dump_only', action='store_true', help='Dump the dataset to CSV and exit. Default: no dump') ; parser.set_defaults(dump_only=False)
 
 TEST_RATIO = 1 / int(parser.parse_args().ratio)
 SIZE = int(parser.parse_args().size) # Trees
@@ -54,6 +55,9 @@ LOOKFWD = int(parser.parse_args().lookfwd)
 START_YEAR = parser.parse_args().startyear
 RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
+DUMP = parser.parse_args().dump_only
+
+VAL_SPLIT = True if (REGRESSOR in ['KTF'] or DUMP) else False
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
@@ -64,11 +68,13 @@ tickers = [ticker] if ticker else market.all_stocks()
 # sectors = market.sectors()
 
 ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, start_year=START_YEAR, resample=RESAMPLE).data
-# ds.to_csv('debug_data.csv', index=True) # Uncomment to dump all features into a CSV file for debugging.
+ds = ds[ds.future != 0].dropna()
+
 features = list(ds.columns)
 features.remove('future') # remove the target variable from features, duh
 
-tds, predictors = { 'X_train': [], 'X_test': [], 'y_train': [], 'y_test': [] }, None
+tds = { 'X_train': [], 'X_val': [], 'X_test': [], 'y_train': [], 'y_val': [], 'y_test': [] }
+predictors = None
 
 if VERBOSE > 0:
     print(ds.info(memory_usage='deep'))
@@ -89,22 +95,46 @@ for t, td in ds.groupby(level=1):
     date_to = pd.to_datetime(td.index.levels[0].values[-1]).strftime('%Y-%m-%d')
     split_index = int(len(td) * (1 - TEST_RATIO))
 
-    tds['X_train'].append(td.iloc[0:split_index][features])
-    tds['X_test'].append(td.iloc[(split_index + LOOKFWD):][features])
-    tds['y_train'].append(td.iloc[0:split_index]['future'])
-    tds['y_test'].append(td.iloc[(split_index + LOOKFWD):]['future'])
+    val_start_index = split_index + LOOKBACK
+    n_val_test_samples = len(td) - (val_start_index + 1)
+    val_samples = int(n_val_test_samples / 2)
+    val_end_index = val_start_index + val_samples
 
-    if VERBOSE > 2:
-        print(t, ':', len(tds['X_train'][-1]), 'train,', len(tds['X_test'][-1]), 'test samples')
+    test_start_index = val_start_index + val_samples + LOOKBACK
+
+    if not VAL_SPLIT:
+        tds['X_train'].append(td.iloc[0:split_index][features])
+        tds['y_train'].append(td.iloc[0:split_index]['future'])
+
+        tds['X_test'].append(td.iloc[(split_index + LOOKBACK):][features])
+        tds['y_test'].append(td.iloc[(split_index + LOOKBACK):]['future'])
+    else:
+        tds['X_train'].append(td.iloc[0:split_index][features])
+        tds['y_train'].append(td.iloc[0:split_index]['future'])
+
+        tds['X_val'].append(td.iloc[val_start_index:val_end_index][features])
+        tds['y_val'].append(td.iloc[val_start_index:val_end_index]['future'])
+
+        tds['X_test'].append(td.iloc[test_start_index:][features])
+        tds['y_test'].append(td.iloc[test_start_index:]['future'])
 
 X_train = pd.concat(tds['X_train'], axis = 0)
-X_test = pd.concat(tds['X_test'], axis = 0)
 y_train = pd.concat(tds['y_train'], axis = 0)
+
+X_val = pd.concat(tds['X_val'], axis = 0) if len(tds['X_val']) > 0 else pd.DataFrame()
+y_val = pd.concat(tds['y_val'], axis = 0) if len(tds['y_val']) > 0 else pd.DataFrame()
+
+X_test = pd.concat(tds['X_test'], axis = 0)
 y_test = pd.concat(tds['y_test'], axis = 0)
 
-print('X_train:', X_train.shape, 'X_test:', X_test.shape, 'y_train:', y_train.shape, 'y_test:', y_test.shape)
+print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.shape,
+            'y_train:', y_train.shape, 'y_val:', y_val.shape, 'y_test:', y_test.shape
+        )
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE)
+if DUMP:
+    dump_dataset.dump_to_csv(X_train, y_train, X_val, y_val, X_test, y_test)
+
+regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, X_val=X_val, y_val=y_val)
 model = regressor.model
 
 if regressor.needs_feature_scaling:
