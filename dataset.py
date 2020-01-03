@@ -188,7 +188,7 @@ class DataSet:
             for i in range(2, (self.lookback + 1)):
                 past = d[c].shift(i)
 
-                d = pd.concat([d, past.rename(f'past-{c}_{i}')], axis=1)
+                d = pd.concat([d, past.rename(f'past_{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)

@@ -22,7 +22,7 @@ import pandas as pd
 from random import shuffle
 
 def dump_to_csv(    X_train, y_train, X_val, y_val, X_test, y_test,
-                    mode='auto_ml', out_file='/mnt/d/stox-dataset-sorted.csv'):
+                    mode='h2o', out_file='~/stox-dataset.csv'):
 
     train = pd.concat([X_train, y_train], axis=1)
     val = pd.concat([X_val, y_val], axis=1)
@@ -32,8 +32,14 @@ def dump_to_csv(    X_train, y_train, X_val, y_val, X_test, y_test,
         train['SPLIT'] = 'TRAIN'
         val['SPLIT'] = 'VALIDATE'
         test['SPLIT'] = 'TEST'
+        dataset = pd.concat([train, val, test], axis=0)
+        dataset.to_csv(out_file, index=False)
+        print('Dumped the dataset to', out_file)
 
-    dataset = pd.concat([train, val, test], axis=0).sort_index()
-    dataset.to_csv(out_file, index=False)
-    print('Dumped the dataset to', out_file)
+    elif mode == 'h2o':
+        train.to_csv('~/stox-dataset-train.csv', index=False)
+        val.to_csv('~/stox-dataset-validate.csv', index=False)
+        test.to_csv('~/stox-dataset-test.csv', index=False)
+        print('Dumped the datasets to ~/')
+
     sys.exit()
