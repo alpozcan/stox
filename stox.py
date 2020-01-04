@@ -39,7 +39,7 @@ parser.add_argument('--ratio', default=5, help='Denominator of train/test split 
 parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
-parser.add_argument('--lookback', default=9, help='The number of periods for look-back features. Default: 9.')
+parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
 parser.add_argument('--startyear', default=1970, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1970.')
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
@@ -134,10 +134,7 @@ print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.
 if DUMP:
     dump_dataset.dump_to_csv(X_train, y_train, X_val, y_val, X_test, y_test)
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, X_val=X_val, y_val=y_val)
-model = regressor.model
-
-if regressor.needs_feature_scaling:
+if REGRESSOR in ['MLP', 'KTF']: # needs feature scaling
     from sklearn.compose import ColumnTransformer
     from sklearn.preprocessing import PowerTransformer, MinMaxScaler, OneHotEncoder
     from sklearn.pipeline import Pipeline
@@ -151,17 +148,14 @@ if regressor.needs_feature_scaling:
         ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ],
         n_jobs=-1)
 
-    preprocessor.fit(X_train)
+    X_train = preprocessor.fit_transform(X_train)
+    X_val = preprocessor.transform(X_val)
 
-    n_categoricals = len(preprocessor.named_transformers_['categorical'].get_feature_names())
-    regressor.input_dim = n_categoricals + len(X_train.select_dtypes(include=['float64']).columns)
+regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, X_val=X_val, y_val=y_val.to_numpy())
+model = regressor.model
 
-    time_start = perf_counter()
-    model.fit(preprocessor.transform(X_train), y_train.to_numpy())
-else:
-    time_start = perf_counter()
-    model.fit(X_train, y_train)
-
+time_start = perf_counter()
+model.fit(X_train, y_train.to_numpy())
 print('Training took', round(perf_counter() - time_start, 2), 'seconds')
 
 if VERBOSE > 0 and regressor.supports_feature_importance:

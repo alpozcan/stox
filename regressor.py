@@ -23,6 +23,7 @@ class Regressor():
     def __init__(self, kind, size, seed, verbosity, X_val, y_val):
         self.kind, self.size, self.seed, self.verbosity = kind, size, seed, verbosity
         self.X_val, self.y_val = X_val, y_val # validation data
+        self.input_dim = X_val.shape[1] if len(X_val) > 0 else None
         self.needs_feature_scaling = False
         self.supports_feature_importance = True
 
@@ -87,7 +88,7 @@ class Regressor():
             model =(KerasRegressor  (   build_fn=self.keras_model,
                                         epochs=1000,
                                         batch_size=128,
-                                        verbose=False,
+                                        verbose=self.verbosity,
                                         callbacks=callbacks,
                                         validation_data=(self.X_val, self.y_val)
                                     )

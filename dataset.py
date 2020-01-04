@@ -28,6 +28,8 @@ from lib import market, mock
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
 
+MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be considered numerical rather than categorical
+
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
     def __init__(self, tickers, lookback, lookfwd, start_year=1970, imputate=True, resample='no', ta=True, patterns=True):
@@ -213,9 +215,9 @@ class DataSet:
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
         
-        # convert to categorical types on applicable columns (those with fewer than 54 cardinality)
+        # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
         cardinalities = ds.apply(pd.Series.nunique)
-        categoricals = list(cardinalities[cardinalities < 54].index)
+        categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
         categorical_type_dict = { c: 'category' for c in categoricals }
         
         self.data = ds.astype(categorical_type_dict).set_index('ticker', append=True).sort_index()
