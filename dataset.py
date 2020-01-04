@@ -190,16 +190,11 @@ class DataSet:
 
         for c in ['spc', 'mpc', 'spc_minus_mpc', 'volume']:
             for i in range(2, (self.lookback + 1)):
-
                 # past values in a rolling window
                 past = d[c].shift(i)
                 d = pd.concat([d, past.rename(f'past_{c}_{i}')], axis=1)
-
                 # linear regression slopes
-                d = pd.concat([d, (abstract.Function('LINEARREG_SLOPE')(d, price=c, timeperiod=i)).rename(f'slope_{c}_{i}')], axis=1)
-
-        # for i in range(2, (self.lookback + 1)):
-
+                d = pd.concat([d, (abstract.Function('LINEARREG_SLOPE')(d, price=c, timeperiod=i)).rename(f'LINEARREG_SLOPE_{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)

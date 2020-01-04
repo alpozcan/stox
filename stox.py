@@ -134,29 +134,34 @@ print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.
 if DUMP:
     dump_dataset.dump_to_csv(X_train, y_train, X_val, y_val, X_test, y_test)
 
-if REGRESSOR in ['MLP', 'KTF']: # needs feature scaling
+regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE)
+
+if regressor.needs_feature_scaling:
     from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import PowerTransformer, MinMaxScaler, OneHotEncoder
+    from sklearn.preprocessing import PowerTransformer, MinMaxScaler, StandardScaler, OneHotEncoder
     from sklearn.pipeline import Pipeline
 
     num_scaler = Pipeline([
-        ('transformer', PowerTransformer(method='yeo-johnson', standardize=True)),
+        # ('standardiser', StandardScaler()),
+        # ('transformer', PowerTransformer(method='yeo-johnson', standardize=True)),
         ('scaler', MinMaxScaler(feature_range=(-1,1))) ])
 
     preprocessor = ColumnTransformer(transformers=[
         ('numerical', num_scaler, X_train.select_dtypes(include=['float64']).columns ),
         ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ],
-        n_jobs=-1)
+        n_jobs=-1, verbose=VERBOSE)
 
-    X_train = preprocessor.fit_transform(X_train)
-    X_val = preprocessor.transform(X_val)
+    X_train_pp = preprocessor.fit_transform(X_train)
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE, X_val=X_val, y_val=y_val.to_numpy())
-model = regressor.model
+    model = regressor.init_model(X_val=preprocessor.transform(X_val), y_val=y_val.to_numpy())
+    time_start_tr = perf_counter()
+    model.fit(X_train_pp, y_train.to_numpy())
+else:
+    model = regressor.init_model(X_val=X_val, y_val=y_val)
+    time_start_tr = perf_counter()
+    model.fit(X_train, y_train)
 
-time_start = perf_counter()
-model.fit(X_train, y_train.to_numpy())
-print('Training took', round(perf_counter() - time_start, 2), 'seconds')
+print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
 if VERBOSE > 0 and regressor.supports_feature_importance:
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
