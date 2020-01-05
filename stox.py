@@ -151,16 +151,15 @@ if regressor.needs_feature_scaling:
         ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ],
         n_jobs=-1, verbose=VERBOSE)
 
-    X_train_pp = preprocessor.fit_transform(X_train)
+    X_train = preprocessor.fit_transform(X_train)
+    y_train = y_train.to_numpy()
 
     model = regressor.init_model(X_val=preprocessor.transform(X_val), y_val=y_val.to_numpy())
-    time_start_tr = perf_counter()
-    model.fit(X_train_pp, y_train.to_numpy())
 else:
     model = regressor.init_model(X_val=X_val, y_val=y_val)
-    time_start_tr = perf_counter()
-    model.fit(X_train, y_train)
 
+time_start_tr = perf_counter()
+model.fit(X_train, y_train)
 print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
 if VERBOSE > 0 and regressor.supports_feature_importance:
@@ -182,10 +181,9 @@ for t, p in predictors.groupby(level=0):
         continue
 
     try:
-        xt, yt, xT, yT = X_train.xs(t, level=1, drop_level=False), y_train.xs(t, level=1, drop_level=False), X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
+        xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
 
         if regressor.needs_feature_scaling:
-            xt = preprocessor.transform(xt)
             xT = preprocessor.transform(xT)
     except KeyError:
         continue
@@ -202,7 +200,6 @@ for t, p in predictors.groupby(level=0):
     results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
     results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
     results.at[t, 'var_score'] = explained_variance_score(yT, predictions)
-    results.at[t, 'train_samples'] = xt.shape[0]
     results.at[t, 'test_samples'] = xT.shape[0]
     results.at[t, 'potential'] = results.loc[t, 'prediction'] * results.loc[t, 'var_score'] * \
                                  (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
