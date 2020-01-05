@@ -84,6 +84,7 @@ class Regressor():
             self.model =(KerasRegressor (   build_fn=self.keras_model,
                                             epochs=1000,
                                             batch_size=128,
+                                            random_state=self.seed,
                                             verbose=False,
                                             callbacks=callbacks,
                                             validation_data=(X_val, y_val)
