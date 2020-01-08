@@ -22,13 +22,8 @@
 class Regressor():
     def __init__(self, kind, size, seed, verbosity):
         self.kind, self.size, self.seed, self.verbosity = kind, size, seed, verbosity
-        self.needs_feature_scaling = True if kind in ['MLP', 'KTF'] else False
-        self.supports_feature_importance = True
 
-    def init_model(self, X_val=None, y_val=None):
-        self.input_dim = X_val.shape[1] if len(X_val) > 0 else None
-
-        if self.kind == 'LGB':
+        if kind == 'LGB':
             from lightgbm import LGBMRegressor
             self.model = LGBMRegressor( boosting_type='gbdt', class_weight=None, colsample_bytree=1.0,
                                         importance_type='split', learning_rate=0.1, max_depth=-1,
@@ -38,81 +33,18 @@ class Regressor():
                                         subsample_for_bin=200000, subsample_freq=0,
                                         n_estimators=self.size, random_state=self.seed, verbosity=self.verbosity )
 
-        elif self.kind == 'GBR':
+        elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
             self.model = GradientBoostingRegressor( loss="lad", min_samples_leaf=11, min_samples_split=8,
                                                     n_estimators=self.size, random_state=self.seed, verbose=self.verbosity )
 
-        elif self.kind == 'ETR':
+        elif kind == 'RFR':
+            from sklearn.ensemble import RandomForestRegressor
+            self.model = RandomForestRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
+
+        elif kind == 'ETR':
             from sklearn.ensemble import ExtraTreesRegressor
-            self.model = ExtraTreesRegressor(   n_jobs=-1, 
-                                                n_estimators=self.size, random_state=self.seed, verbose=self.verbosity )
-
-        elif self.kind == 'MLP':
-            from sklearn.neural_network import MLPRegressor
-
-            self.supports_feature_importance = False
-
-            self.model = MLPRegressor(  hidden_layer_sizes= (   int(self.size / 4),
-                                                                int(self.size / 4),
-                                                                int(self.size / 8)
-                                                            ),
-                                        batch_size=128,
-                                        activation='relu', # logistic, tanh, relu
-                                        solver='sgd',
-                                        alpha=1e-03, # default 1e-04
-                                        validation_fraction=.1,
-                                        tol=1e-05, # default: 1e-04
-                                        learning_rate_init=5e-04, # default 1e-03
-                                        random_state=self.seed,
-                                        verbose=self.verbosity,
-                                        early_stopping=True,
-                                        learning_rate='adaptive',
-                                        max_iter=1000)
-
-        elif self.kind == 'KTF':
-            from tensorflow.keras.wrappers.scikit_learn import KerasRegressor
-            from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, TensorBoard, ProgbarLogger
-
-            self.supports_feature_importance = False
-
-            callbacks =  [EarlyStopping     (monitor='val_loss', min_delta=1e-05, patience=13, verbose=self.verbosity)]
-            callbacks += [ReduceLROnPlateau (monitor='val_loss', min_delta=1e-05, factor=1/5, patience=10, verbose=self.verbosity)]
-            callbacks += [ProgbarLogger     (count_mode='samples', stateful_metrics=None)]
-            # callbacks +=  [TensorBoard()]
-
-            self.model =(KerasRegressor (   build_fn=self.keras_model,
-                                            epochs=1000,
-                                            batch_size=128,
-                                            random_state=self.seed,
-                                            verbose=False,
-                                            callbacks=callbacks,
-                                            validation_data=(X_val, y_val)
-                                        ))
+            self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
         else:
-            print(f"Unrecognised regressor type '{self.kind}'")
-
-        if self.verbosity > 0:
-            print(self.model)
-
-        return self.model
-
-    def keras_model(self):
-        from tensorflow.keras.models import Sequential
-        from tensorflow.keras.optimizers import SGD, RMSprop, Adam, Adagrad, Adadelta, Adamax, Nadam
-        from tensorflow.keras import layers
-
-        model = Sequential()
-
-        model.add(layers.Dense(int(self.size / 4), activation='relu', input_shape=(self.input_dim,)))
-        model.add(layers.Dense(int(self.size / 4), activation='relu'))
-        model.add(layers.Dense(int(self.size / 8), activation='relu'))
-        model.add(layers.Dense(1))
-
-        optimiser = Adam(lr=1e-03, epsilon=None, decay=0.0, amsgrad=False)
-        model.compile(loss='mean_absolute_error', optimizer=optimiser)
-        if self.verbosity > 0:
-            print(model.summary())
-
-        return model
+            print(f"Unrecognised regressor type '{kind}'")

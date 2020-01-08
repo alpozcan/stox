@@ -27,7 +27,6 @@ from lib import market, mock
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
-
 MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be considered numerical rather than categorical
 
 class DataSet:

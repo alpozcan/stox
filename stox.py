@@ -57,8 +57,6 @@ RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
 DUMP = parser.parse_args().dump_only
 
-VAL_SPLIT = True if (REGRESSOR in ['KTF'] or DUMP) else False
-
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
 ticker = parser.parse_args().ticker
@@ -102,7 +100,7 @@ for t, td in ds.groupby(level=1):
 
     test_start_index = val_start_index + val_samples + LOOKBACK
 
-    if not VAL_SPLIT:
+    if not DUMP:
         tds['X_train'].append(td.iloc[0:split_index][features])
         tds['y_train'].append(td.iloc[0:split_index]['future'])
 
@@ -134,35 +132,13 @@ print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.
 if DUMP:
     dump_dataset.dump_to_csv(X_train, y_train, X_val, y_val, X_test, y_test)
 
-regressor = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE)
-
-if regressor.needs_feature_scaling:
-    from sklearn.compose import ColumnTransformer
-    from sklearn.preprocessing import PowerTransformer, MinMaxScaler, StandardScaler, OneHotEncoder
-    from sklearn.pipeline import Pipeline
-
-    num_scaler = Pipeline([
-        # ('standardiser', StandardScaler()),
-        # ('transformer', PowerTransformer(method='yeo-johnson', standardize=True)),
-        ('scaler', MinMaxScaler(feature_range=(-1,1))) ])
-
-    preprocessor = ColumnTransformer(transformers=[
-        ('numerical', num_scaler, X_train.select_dtypes(include=['float64']).columns ),
-        ('categorical', OneHotEncoder(), X_train.select_dtypes(include=['category']).columns ) ],
-        n_jobs=-1, verbose=VERBOSE)
-
-    X_train = preprocessor.fit_transform(X_train)
-    y_train = y_train.to_numpy()
-
-    model = regressor.init_model(X_val=preprocessor.transform(X_val), y_val=y_val.to_numpy())
-else:
-    model = regressor.init_model(X_val=X_val, y_val=y_val)
+model = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE).model
 
 time_start_tr = perf_counter()
 model.fit(X_train, y_train)
 print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
-if VERBOSE > 0 and regressor.supports_feature_importance:
+if VERBOSE > 0:
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi)
 
@@ -183,8 +159,6 @@ for t, p in predictors.groupby(level=0):
     try:
         xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
 
-        if regressor.needs_feature_scaling:
-            xT = preprocessor.transform(xT)
     except KeyError:
         continue
 
@@ -195,7 +169,7 @@ for t, p in predictors.groupby(level=0):
 
     predictions = model.predict(xT)
     results.at[t, 'predicted_at'] = predicted_at
-    results.at[t, 'prediction'] = model.predict(preprocessor.transform(predictor)) if regressor.needs_feature_scaling else model.predict(predictor)[0]
+    results.at[t, 'prediction'] = model.predict(predictor)[0]
     results.at[t, 'volatility'] = abs(yT).mean()
     results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
     results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
@@ -209,7 +183,7 @@ print(results, results.describe(), sep='\n')
 results.to_csv(f'results/{timestamp}.csv')
 
 # print overall results
-overall_predictions = model.predict(preprocessor.transform(X_test)) if regressor.needs_feature_scaling else model.predict(X_test)
+overall_predictions = model.predict(X_test)
 overall_volatility = round(abs(y_test).mean(), 4)
 overall_error = round(mean_absolute_error(y_test, overall_predictions), 4)
 print('Overall volatility:', overall_volatility, ', error:', overall_error, ', alpha:', round((overall_volatility / overall_error - 1) * 100, 2))
