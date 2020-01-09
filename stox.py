@@ -142,7 +142,8 @@ if VERBOSE > 0:
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi)
 
-predictors = predictors.set_index('ticker').sort_index()
+predictors.set_index('ticker', inplace=True)
+predictors.sort_index(inplace=True)
 
 results = pd.DataFrame()
 for t, p in predictors.groupby(level=0):
