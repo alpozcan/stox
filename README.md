@@ -86,10 +86,6 @@ optional arguments:
 
 * `ETR` : [Extra-Trees](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html)
 
-* ~~~`MLP`~~~ : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) (removed in 15e19c1bd100dcdbf2a1346ae883877f5752f564)
-
-* ~~~`KTF`~~~ : [Tensorflow neural nets via Keras](https://keras.io/scikit-learn-api/) (removed in 15e19c1bd100dcdbf2a1346ae883877f5752f564)
-
 ## Predictions and Performance Metrics
 
 A table of per-ticker prediction results will be printed at the end. The results are sorted based on 'potential', where a high value of this metric can be interpreted as a BUY, and a low, negative value as a SELL signal.
