@@ -41,18 +41,15 @@ There is no hard requirement for the data to be at daily frequency, so for examp
 ## Usage
 
 ```
-stox.py [-h] [--ticker TICKER] [--index INDEX] [--ratio RATIO]
-               [--size SIZE] [--seed SEED] [--verbose VERBOSE]
-               [--lookback LOOKBACK] [--lookfwd LOOKFWD] [--resample RESAMPLE]
-               [--regressor REGRESSOR]
+usage: stox.py [-h] [--ticker TICKER] [--ratio RATIO] [--size SIZE]
+               [--seed SEED] [--verbose VERBOSE] [--lookback LOOKBACK]
+               [--lookfwd LOOKFWD] [--startyear STARTYEAR]
+               [--resample RESAMPLE] [--regressor REGRESSOR] [--dump]
 
 optional arguments:
   -h, --help            show this help message and exit
   --ticker TICKER       Single ticker code, or _MOCK_EASY or _MOCK_HARD for
                         mock tests
-  --index INDEX         One of the keys of stock indices as defined in
-                        data/indices.yml, to populate the dataset with.
-                        Default: XAO
   --ratio RATIO         Denominator of train/test split ratio. Default is 5,
                         meaning a 80/20 percent train/test split.
   --size SIZE           Model size. For tree-based regressors it is the number
@@ -76,19 +73,22 @@ optional arguments:
   --regressor REGRESSOR
                         String alias for the regressor model to use, as
                         defined in regressor.py. Default: LGB
+  --dump                Dump the dataset to CSV and exit. Default: no dump
 ```
 
 ### The Regressors
 
-* `LGB` (default, recommended): [LightGBM Regressor](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html)
+* `LGB` (default, recommended): [LightGBM Regressor](https://lightgbm.readthedocs.io/en/latest/pythonapi/lightgbm.LGBMRegressor.html) This is the fastest and the best performing algorithm.
 
 * `GBR`: [Scikit-learn's Gradient Boosting Regressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.GradientBoostingRegressor.html)
 
+* `RFR` : [Scikit-learn's Random Forest Regressor](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestRegressor.html)
+
 * `ETR` : [Extra-Trees](https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html)
 
-* `MLP` : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html)
+* ~~~`MLP`~~~ : [Multi-layer Perceptron](https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPRegressor.html) (removed in 15e19c1bd100dcdbf2a1346ae883877f5752f564)
 
-* `KTF` : [Tensorflow neural nets via Keras](https://keras.io/scikit-learn-api/)
+* ~~~`KTF`~~~ : [Tensorflow neural nets via Keras](https://keras.io/scikit-learn-api/) (removed in 15e19c1bd100dcdbf2a1346ae883877f5752f564)
 
 ## Predictions and Performance Metrics
 
