@@ -214,4 +214,8 @@ class DataSet:
         categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
         categorical_type_dict = { c: 'category' for c in categoricals }
         
-        self.data = ds.astype(categorical_type_dict).set_index('ticker', append=True).sort_index()
+        ds = ds.astype(categorical_type_dict, copy=False)
+        ds.set_index('ticker', append=True, inplace=True)
+        ds.sort_index(inplace=True)
+
+        self.data = ds
