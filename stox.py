@@ -104,8 +104,8 @@ for t, td in ds.groupby(level=1):
         tds['X_train'].append(td.iloc[0:split_index][features])
         tds['y_train'].append(td.iloc[0:split_index]['future'])
 
-        tds['X_test'].append(td.iloc[(split_index + LOOKBACK):][features])
-        tds['y_test'].append(td.iloc[(split_index + LOOKBACK):]['future'])
+        tds['X_test'].append(td.iloc[val_start_index:][features])
+        tds['y_test'].append(td.iloc[val_start_index:]['future'])
     else:
         tds['X_train'].append(td.iloc[0:split_index][features])
         tds['y_train'].append(td.iloc[0:split_index]['future'])
