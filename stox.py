@@ -116,14 +116,14 @@ for t, td in ds.groupby(level=1):
         tds['X_test'].append(td.iloc[test_start_index:][features])
         tds['y_test'].append(td.iloc[test_start_index:]['future'])
 
-X_train = pd.concat(tds['X_train'], axis = 0)
-y_train = pd.concat(tds['y_train'], axis = 0)
+X_train = pd.concat(tds['X_train'], axis = 0, copy=False)
+y_train = pd.concat(tds['y_train'], axis = 0, copy=False)
 
-X_val = pd.concat(tds['X_val'], axis = 0) if len(tds['X_val']) > 0 else pd.DataFrame()
-y_val = pd.concat(tds['y_val'], axis = 0) if len(tds['y_val']) > 0 else pd.DataFrame()
+X_val = pd.concat(tds['X_val'], axis = 0, copy=False) if len(tds['X_val']) > 0 else pd.DataFrame()
+y_val = pd.concat(tds['y_val'], axis = 0, copy=False) if len(tds['y_val']) > 0 else pd.DataFrame()
 
-X_test = pd.concat(tds['X_test'], axis = 0)
-y_test = pd.concat(tds['y_test'], axis = 0)
+X_test = pd.concat(tds['X_test'], axis = 0, copy=False)
+y_test = pd.concat(tds['y_test'], axis = 0, copy=False)
 
 print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.shape,
             'y_train:', y_train.shape, 'y_val:', y_val.shape, 'y_test:', y_test.shape
