@@ -18,7 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
-import argparse, datetime, os
+import argparse, datetime, os, sys
+from zipfile import ZipFile
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
@@ -28,6 +29,16 @@ from lib import market, dump_dataset
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
+
+if not os.path.exists(f'{BASE_DIR}/data/stox.db'):
+    if os.path.exists(f'{BASE_DIR}/data/stox_db.zip'):
+        print('unpacking the database...')
+        with ZipFile(f'{BASE_DIR}/data/stox_db.zip', 'r') as zip_archive:
+            zip_archive.extractall(path=f'{BASE_DIR}/data')
+        os.remove(f'{BASE_DIR}/data/stox_db.zip')
+    else:
+        print('Error: database file could not be found. Exiting.')
+        sys.exit(1)
 
 if __name__ == '__main__':
     now = datetime.datetime.now()
