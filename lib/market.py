@@ -18,12 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
-import yaml
 
-def index_participants(index):
-    with open('data/indices.yml', 'r') as file:
-        indices = yaml.load(file)
-    return indices[index]
+# def index_participants(index):
+#     with open('data/indices.yml', 'r') as file:
+#         indices = yaml.load(file)
+#     return indices[index]
 
 # def companies():
 #     return pd.read_csv('data/companies/ASXListedCompanies.csv',skiprows=[0,1], index_col='ASX code')

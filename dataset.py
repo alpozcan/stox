@@ -42,24 +42,20 @@ class DataSet:
         self.patterns = patterns
 
         self.d_market = { }
-        self.d_market['AU'] = self.preprocess_ts(pd.read_sql_query( f"""
-                                                                    SELECT date, open, close FROM `indices` 
-                                                                    WHERE ticker='XAO[AU]' 
-                                                                    AND date > '{self.start_year}-01-01' 
-                                                                    ORDER BY date ASC
-                                                                    """,
-                                                                    'sqlite:///data/stox.db',
-                                                                    index_col=['date']))
-        self.d_market['US'] = self.preprocess_ts(pd.read_sql_query( f"""
-                                                                    SELECT date, open, close FROM `indices` 
-                                                                    WHERE ticker='SPX[US]' 
-                                                                    AND date > '{self.start_year}-01-01' 
-                                                                    ORDER BY date ASC
-                                                                    """,
-                                                                    'sqlite:///data/stox.db',
-                                                                    index_col=['date']))
+        self.d_market['AU'] = self.get_market_data('XAO[AU]')
+        self.d_market['US'] = self.get_market_data('SPX[US]')
 
         self.multi_ts_data()
+
+    def get_market_data(self, market_index):
+        return self.preprocess_ts(pd.read_sql_query(    f"""
+                                                        SELECT date, open, close FROM `indices` 
+                                                        WHERE ticker='{market_index}' 
+                                                        AND date > '{self.start_year}-01-01' 
+                                                        ORDER BY date ASC
+                                                        """,
+                                                        'sqlite:///data/stox.db',
+                                                        index_col=['date']))
 
     def preprocess_ts(self, d):
         """ Preprecess time series data """
@@ -119,10 +115,10 @@ class DataSet:
                                                                 """,
                                                                 'sqlite:///data/stox.db',
                                                                 index_col=['date']))
-        elif ticker == '_MOCK_EASY':
+        elif ticker.startswith('_MOCK_EASY'):
             print('Generating predictable data...')
             d_ticker = self.preprocess_ts(mock.generatePredictableData())
-        elif ticker == '_MOCK_HARD':
+        elif ticker.startswith('_MOCK_HARD'):
             print('Generating unpredictable data...')
             d_ticker = self.preprocess_ts(mock.generateRandomData())
 

@@ -19,18 +19,18 @@
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import random
 
 COLUMNS = ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
 
-def generatePredictableData(length=20000):
+def generatePredictableData():
     """ Generates monotonous data that is very predictable """
     data = pd.DataFrame(columns=COLUMNS)
     t = '_MOCK_EASY'
-    d = datetime.strptime('Jan 1 1970', '%b %d %Y')
+    d = datetime.strptime('Jan 1 2000', '%b %d %Y')
 
-    for i in range(length):
+    for i in range((datetime.now() - d).days):
         d = d + timedelta(days=1)
         o = (i + 1) / 1000
         h = o * 1.005
@@ -42,15 +42,15 @@ def generatePredictableData(length=20000):
 
     return data.set_index('date')
 
-def generateRandomData(length=20000):
+def generateRandomData():
     """ Generates gaussian-distributed random data that should be unpredictable """
     data = pd.DataFrame(columns=COLUMNS)
     t = '_MOCK_HARD'
-    d = datetime.strptime('Jan 1 1970', '%b %d %Y')
+    d = datetime.strptime('Jan 1 2000', '%b %d %Y')
 
     old_c = 100000
-    for i in range(length):
-        # old_c = 100000 # comment this out to base the new price on previous day
+    for i in range((datetime.now() - d).days):
+        # old_c = 100000 # comment this out to base the new price on the previous day
         d = d + timedelta(days=1)
         o = old_c * random.gauss(1, 0.04)
         c = o * random.gauss(1, 0.04)

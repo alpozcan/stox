@@ -30,11 +30,10 @@ pd.set_option('mode.chained_assignment', None)
 
 now = datetime.datetime.now()
 day_of_week = now.strftime("%a").upper()
-day_of_week = 'FRI' if (day_of_week == 'SAT' or day_of_week == 'SUN') else day_of_week
+day_of_week = 'FRI' if day_of_week in ['SAT', 'SUN'] else day_of_week
 timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--ticker', default=None, help='Single ticker code, or _MOCK_EASY or _MOCK_HARD for mock tests')
 parser.add_argument('--ratio', default=5, help='Denominator of train/test split ratio. Default is 5, meaning a 80/20 percent train/test split.')
 parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
@@ -44,6 +43,7 @@ parser.add_argument('--lookfwd', default=1, help='The number of periods into the
 parser.add_argument('--startyear', default=1970, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1970.')
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
+parser.add_argument('--mock', dest='include_mock', action='store_true', help='Include predictions on mock data') ; parser.set_defaults(include_mock=False)
 parser.add_argument('--dump', dest='dump_only', action='store_true', help='Dump the dataset to CSV and exit. Default: no dump') ; parser.set_defaults(dump_only=False)
 
 TEST_RATIO = 1 / int(parser.parse_args().ratio)
@@ -55,12 +55,12 @@ LOOKFWD = int(parser.parse_args().lookfwd)
 START_YEAR = parser.parse_args().startyear
 RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
+MOCK = parser.parse_args().include_mock
 DUMP = parser.parse_args().dump_only
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
-ticker = parser.parse_args().ticker
-tickers = [ticker] if ticker else market.all_stocks()
+tickers = market.all_stocks() if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
 
 # companies = market.companies() # columns: Company name,ASX code,GICS industry group
 # sectors = market.sectors()
@@ -79,13 +79,12 @@ if VERBOSE > 0:
     print(ds.describe())
 
 for t, td in ds.groupby(level=1):
-    if t in tickers:
-        predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
-        predictor['ticker'] = t
-        if predictors is None:
-            predictors = predictor # init the dataframe
-        else:
-            predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
+    predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
+    predictor['ticker'] = t
+    if predictors is None:
+        predictors = predictor # init the dataframe
+    else:
+        predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
 
     td.drop(td.tail(1).index,inplace=True) # remove the predictor from the bottom of the dataframe
 
@@ -101,17 +100,19 @@ for t, td in ds.groupby(level=1):
     test_start_index = val_start_index + val_samples + LOOKBACK
 
     if not DUMP:
-        tds['X_train'].append(td.iloc[0:split_index][features])
-        tds['y_train'].append(td.iloc[0:split_index]['future'])
+        if not t.startswith('_MOCK'): # don't include mock data in training
+            tds['X_train'].append(td.iloc[0:split_index][features])
+            tds['y_train'].append(td.iloc[0:split_index]['future'])
 
         tds['X_test'].append(td.iloc[val_start_index:][features])
         tds['y_test'].append(td.iloc[val_start_index:]['future'])
     else:
-        tds['X_train'].append(td.iloc[0:split_index][features])
-        tds['y_train'].append(td.iloc[0:split_index]['future'])
+        if not t.startswith('_MOCK'):
+            tds['X_train'].append(td.iloc[0:split_index][features])
+            tds['y_train'].append(td.iloc[0:split_index]['future'])
 
-        tds['X_val'].append(td.iloc[val_start_index:val_end_index][features])
-        tds['y_val'].append(td.iloc[val_start_index:val_end_index]['future'])
+            tds['X_val'].append(td.iloc[val_start_index:val_end_index][features])
+            tds['y_val'].append(td.iloc[val_start_index:val_end_index]['future'])
 
         tds['X_test'].append(td.iloc[test_start_index:][features])
         tds['y_test'].append(td.iloc[test_start_index:]['future'])
@@ -147,6 +148,9 @@ predictors.sort_index(inplace=True)
 
 results = pd.DataFrame()
 for t, p in predictors.groupby(level=0):
+    if VERBOSE > 2:
+        print(p)
+
     predicted_at = p['date'].values[0]
     predictor = p.drop('date', axis=1)
 
@@ -177,7 +181,7 @@ for t, p in predictors.groupby(level=0):
     results.at[t, 'var_score'] = explained_variance_score(yT, predictions)
     results.at[t, 'test_samples'] = xT.shape[0]
     results.at[t, 'potential'] = results.loc[t, 'prediction'] * results.loc[t, 'var_score'] * \
-                                 (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
+                                (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
 
 results = results.sort_values('potential', ascending=False).round(2)
 print(results, results.describe(), sep='\n')

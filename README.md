@@ -41,38 +41,29 @@ There is no hard requirement for the data to be at daily frequency, so for examp
 ## Usage
 
 ```
-usage: stox.py [-h] [--ticker TICKER] [--ratio RATIO] [--size SIZE]
-               [--seed SEED] [--verbose VERBOSE] [--lookback LOOKBACK]
-               [--lookfwd LOOKFWD] [--startyear STARTYEAR]
-               [--resample RESAMPLE] [--regressor REGRESSOR] [--dump]
+usage: stox.py [-h] [--ratio RATIO] [--size SIZE] [--seed SEED] [--verbose VERBOSE] [--lookback LOOKBACK]
+               [--lookfwd LOOKFWD] [--startyear STARTYEAR] [--resample RESAMPLE] [--regressor REGRESSOR]
+               [--mock] [--dump]
 
 optional arguments:
   -h, --help            show this help message and exit
-  --ticker TICKER       Single ticker code, or _MOCK_EASY or _MOCK_HARD for
-                        mock tests
-  --ratio RATIO         Denominator of train/test split ratio. Default is 5,
-                        meaning a 80/20 percent train/test split.
-  --size SIZE           Model size. For tree-based regressors it is the number
-                        of estimator trees to build, for neural nets it is
-                        used as a coefficient for the layer widths. Default:
-                        256.
+  --ratio RATIO         Denominator of train/test split ratio. Default is 5, meaning a 80/20 percent
+                        train/test split.
+  --size SIZE           Model size. For tree-based regressors it is the number of estimator trees to build,
+                        for neural nets it is used as a coefficient for the layer widths. Default: 256.
   --seed SEED           Seed for initialising the model weights with
-  --verbose VERBOSE     Integer greater than zero. Greater this number, more
-                        info is printed during run. Default: 1.
-  --lookback LOOKBACK   The number of periods for look-back features. Default:
-                        6.
-  --lookfwd LOOKFWD     The number of periods into the future to predict at.
+  --verbose VERBOSE     Integer greater than zero. Greater this number, more info is printed during run.
                         Default: 1.
+  --lookback LOOKBACK   The number of periods for look-back features. Default: 6.
+  --lookfwd LOOKFWD     The number of periods into the future to predict at. Default: 1.
   --startyear STARTYEAR
-                        Only use samples newer than the start of the year
-                        given. Can be used for reducing the dataset size where
-                        there are memory/time constraints. Default: 1970.
-  --resample RESAMPLE   Period size. 'no' to turn off resampling, or any
-                        pandas-format resampling specification. Default is
-                        weekly resampling on the current workday
+                        Only use samples newer than the start of the year given. Can be used for reducing the
+                        dataset size where there are memory/time constraints. Default: 1970.
+  --resample RESAMPLE   Period size. 'no' to turn off resampling, or any pandas-format resampling
+                        specification. Default is weekly resampling on the current workday
   --regressor REGRESSOR
-                        String alias for the regressor model to use, as
-                        defined in regressor.py. Default: LGB
+                        String alias for the regressor model to use, as defined in regressor.py. Default: LGB
+  --mock                Include predictions on mock data
   --dump                Dump the dataset to CSV and exit. Default: no dump
 ```
 
@@ -120,11 +111,7 @@ WIth the provided data and using the default configuration, a run should not tak
 
 ## Mock Testing with Synthetic Data
 
-It is possible to run Stox with mock data generated at runtime via special ticker codes passed as arguments:
-
-* `--ticker _MOCK_EASY` : Monotonous data that is very predictable. Should result in an alpha score of ~2600.
-
-* `--ticker _MOCK_HARD` : Gaussian-distributed random data that should be unpredictable. Should result in an alpha score of below 30 and possibly negative.
+It is possible to run Stox with mock data generated at runtime, enabled by the  `--mock` switch. When enabled, the predictions and alpha scores for mock tickers will be included in the results.
 
 ## Contributing
 
