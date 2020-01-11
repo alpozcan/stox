@@ -18,17 +18,17 @@ Notable features:
 
 ## Requirements
 
-* Python 3 - most extensively tested on Python 3.6
+* Python 3 - tested on Python 3.6, 3.7 and 3.8
 
-* TA-Lib C library for successful installation of its Python wrapper. Follow the instructions at [TA-Lib documentation](https://github.com/mrjbq7/ta-lib/blob/master/README.md)
+* TA-Lib C library for successful installation of its Python wrapper. Follow the instructions for your platform at [TA-Lib documentation](https://github.com/mrjbq7/ta-lib/blob/master/README.md)
 
 * Python libraries numpy, pandas, TA-Lib, lightgbm, scikit-learn, SQLAlchemy, PyYAML. Install using the included requirements.txt: `pip3 install -r requirements.txt`
 
-* Plenty of RAM. Training on included data with the default settings (LGB regressor) requires about 4 GB of available memory. Other regressors need more. Increasing the lookback period, or using small resampling periods will increase memory requirements exponentially. If you keep getting SegFaults or MemoryErrors, subsampling the data using --startyear will help, but this is obviously not ideal as usually the more data used in training, the better the resulting model can generalise.
+* Plenty of RAM. Training on included data with the default settings (LGB regressor) requires about 6 GB of available memory. Other regressors need more. Increasing the lookback period, or using small resampling periods will increase memory requirements exponentially. If you keep getting SegFaults or MemoryErrors, subsampling the data using --startyear will help, but this is obviously not ideal as usually the more data used in training, the better the resulting model can generalise.
 
 ## The Data
 
-Stox comes with batteries included. `stox.db` is an SQLite database containing approximately 20 years of daily time series data on S&P 500 and ASX All Ordinaries constituents. Columns: `ticker, date, open, high, low, close, volume`.
+Stox comes with batteries included. `stox.db` is an SQLite database containing approximately 20 years of daily time series data of the S&P 500 and ASX All Ordinaries constituents. Columns: `ticker, date, open, high, low, close, volume`.
 
 ## Sampling and Prediction
 

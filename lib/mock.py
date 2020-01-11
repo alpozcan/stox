@@ -32,7 +32,7 @@ def generatePredictableData():
 
     for i in range((datetime.now() - d).days):
         d = d + timedelta(days=1)
-        o = (i + 1) / 1000
+        o = (i*i + 1) / 1000
         h = o * 1.005
         l = o * 0.995
         c = o * 1.01
@@ -50,7 +50,7 @@ def generateRandomData():
 
     old_c = 100000
     for i in range((datetime.now() - d).days):
-        # old_c = 100000 # comment this out to base the new price on the previous day
+        old_c = 1 # comment this out to base the new price on the previous day
         d = d + timedelta(days=1)
         o = old_c * random.gauss(1, 0.04)
         c = o * random.gauss(1, 0.04)
