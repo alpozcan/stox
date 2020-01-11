@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
-import argparse, datetime
+import argparse, datetime, os
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
@@ -26,6 +26,7 @@ from dataset import DataSet
 from regressor import Regressor
 from lib import market, dump_dataset
 
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
 
 if __name__ == '__main__':
@@ -186,7 +187,7 @@ if __name__ == '__main__':
 
     results = results.sort_values('potential', ascending=False).round(2)
     print(results, results.describe(), sep='\n')
-    results.to_csv(f'results/{timestamp}.csv')
+    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
 
     # print overall results
     overall_predictions = model.predict(X_test)

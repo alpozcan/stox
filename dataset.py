@@ -22,8 +22,10 @@ import numpy as np
 import pandas as pd
 import talib as ta
 from talib import abstract
-import multiprocessing
+import multiprocessing, os
 from lib import market, mock
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
@@ -54,7 +56,7 @@ class DataSet:
                                                         AND date > '{self.start_year}-01-01' 
                                                         ORDER BY date ASC
                                                         """,
-                                                        'sqlite:///data/stox.db',
+                                                        f'sqlite:///{BASE_DIR}/data/stox.db',
                                                         index_col=['date']))
 
     def preprocess_ts(self, d):
@@ -113,7 +115,7 @@ class DataSet:
                                                                 AND date > '{self.start_year}-01-01' 
                                                                 ORDER BY date ASC
                                                                 """,
-                                                                'sqlite:///data/stox.db',
+                                                                f'sqlite:///{BASE_DIR}/data/stox.db',
                                                                 index_col=['date']))
         elif ticker.startswith('_MOCK_EASY'):
             print('Generating predictable data...')

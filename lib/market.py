@@ -18,23 +18,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
+import os
 
-# def index_participants(index):
-#     with open('data/indices.yml', 'r') as file:
-#         indices = yaml.load(file)
-#     return indices[index]
-
-# def companies():
-#     return pd.read_csv('data/companies/ASXListedCompanies.csv',skiprows=[0,1], index_col='ASX code')
-
-# def sectors():
-#     return list(companies()['GICS industry group'].unique())
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def all_stocks():
-    tickers = pd.Series(data=pd.read_sql_query( 'SELECT DISTINCT ticker FROM `equities`',
-                                                'sqlite:///data/stox.db',
-                                            )['ticker']
-                        ).tolist()
+    tickers = pd.Series(data=pd.read_sql_query(
+        'SELECT DISTINCT ticker FROM `equities`',
+        f'sqlite:///{BASE_DIR}/../data/stox.db',
+    )['ticker']).tolist()
     print(len(tickers), 'tickers')
     
     return tickers
