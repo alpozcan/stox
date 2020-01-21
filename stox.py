@@ -25,7 +25,7 @@ from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from dataset import DataSet
 from regressor import Regressor
-from lib import market, dump_dataset
+from lib import market
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
@@ -57,7 +57,6 @@ if __name__ == '__main__':
     parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
     parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
     parser.add_argument('--mock', dest='include_mock', action='store_true', help='Include predictions on mock data') ; parser.set_defaults(include_mock=False)
-    parser.add_argument('--dump', dest='dump_only', action='store_true', help='Dump the dataset to CSV and exit. Default: no dump') ; parser.set_defaults(dump_only=False)
 
     TEST_RATIO = 1 / int(parser.parse_args().ratio)
     SIZE = int(parser.parse_args().size) # Trees
@@ -69,7 +68,6 @@ if __name__ == '__main__':
     RESAMPLE = parser.parse_args().resample
     REGRESSOR = parser.parse_args().regressor
     MOCK = parser.parse_args().include_mock
-    DUMP = parser.parse_args().dump_only
 
     MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
@@ -84,7 +82,7 @@ if __name__ == '__main__':
     features = list(ds.columns)
     features.remove('future') # remove the target variable from features, duh
 
-    tds = { 'X_train': [], 'X_val': [], 'X_test': [], 'y_train': [], 'y_val': [], 'y_test': [] }
+    tds = { 'X_train': [], 'X_test': [], 'y_train': [], 'y_test': [] }
     predictors = None
 
     if VERBOSE > 0:
@@ -112,39 +110,22 @@ if __name__ == '__main__':
 
         test_start_index = val_start_index + val_samples + LOOKBACK
 
-        if not DUMP:
-            if not t.startswith('_MOCK'): # don't include mock data in training
-                tds['X_train'].append(td.iloc[0:split_index][features])
-                tds['y_train'].append(td.iloc[0:split_index]['future'])
+        if not t.startswith('_MOCK'): # don't include mock data in training
+            tds['X_train'].append(td.iloc[0:split_index][features])
+            tds['y_train'].append(td.iloc[0:split_index]['future'])
 
-            tds['X_test'].append(td.iloc[val_start_index:][features])
-            tds['y_test'].append(td.iloc[val_start_index:]['future'])
-        else:
-            if not t.startswith('_MOCK'):
-                tds['X_train'].append(td.iloc[0:split_index][features])
-                tds['y_train'].append(td.iloc[0:split_index]['future'])
-
-                tds['X_val'].append(td.iloc[val_start_index:val_end_index][features])
-                tds['y_val'].append(td.iloc[val_start_index:val_end_index]['future'])
-
-            tds['X_test'].append(td.iloc[test_start_index:][features])
-            tds['y_test'].append(td.iloc[test_start_index:]['future'])
+        tds['X_test'].append(td.iloc[val_start_index:][features])
+        tds['y_test'].append(td.iloc[val_start_index:]['future'])
 
     X_train = pd.concat(tds['X_train'], axis = 0, copy=False)
     y_train = pd.concat(tds['y_train'], axis = 0, copy=False)
 
-    X_val = pd.concat(tds['X_val'], axis = 0, copy=False) if len(tds['X_val']) > 0 else pd.DataFrame()
-    y_val = pd.concat(tds['y_val'], axis = 0, copy=False) if len(tds['y_val']) > 0 else pd.DataFrame()
-
     X_test = pd.concat(tds['X_test'], axis = 0, copy=False)
     y_test = pd.concat(tds['y_test'], axis = 0, copy=False)
 
-    print   (   'X_train:', X_train.shape, 'X_val:', X_val.shape, 'X_test:', X_test.shape,
-                'y_train:', y_train.shape, 'y_val:', y_val.shape, 'y_test:', y_test.shape
+    print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
+                'y_train:', y_train.shape, 'y_test:', y_test.shape
             )
-
-    if DUMP:
-        dump_dataset.dump_to_csv(X_train, y_train, X_val, y_val, X_test, y_test)
 
     model = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE).model
 
@@ -193,7 +174,8 @@ if __name__ == '__main__':
         results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
         results.at[t, 'var_score'] = explained_variance_score(yT, predictions)
         results.at[t, 'test_samples'] = xT.shape[0]
-        results.at[t, 'potential'] = results.loc[t, 'prediction'] * results.loc[t, 'var_score'] * \
+        results.at[t, 'potential'] = results.loc[t, 'prediction'] * \
+                                    (results.loc[t, 'var_score'] if results.loc[t, 'var_score'] > 0 else 0) * \
                                     (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
 
     results = results.sort_values('potential', ascending=False).round(2)
