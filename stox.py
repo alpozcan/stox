@@ -109,8 +109,8 @@ if __name__ == '__main__':
             tds['X_train'].append(td.iloc[0:split_index][features])
             tds['y_train'].append(td.iloc[0:split_index]['future'])
 
-        tds['X_test'].append(td.iloc[val_start_index:][features])
-        tds['y_test'].append(td.iloc[val_start_index:]['future'])
+        tds['X_test'].append(td.iloc[test_start_index:][features])
+        tds['y_test'].append(td.iloc[test_start_index:]['future'])
 
     X_train = pd.concat(tds['X_train'], axis = 0, copy=False)
     y_train = pd.concat(tds['y_train'], axis = 0, copy=False)
@@ -119,8 +119,7 @@ if __name__ == '__main__':
     y_test = pd.concat(tds['y_test'], axis = 0, copy=False)
 
     print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
-                'y_train:', y_train.shape, 'y_test:', y_test.shape
-            )
+                'y_train:', y_train.shape, 'y_test:', y_test.shape )
 
     model = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE).model
 
