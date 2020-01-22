@@ -20,13 +20,11 @@
 import pandas as pd
 import os
 
-BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-
 def all_stocks():
     tickers = pd.Series(data=pd.read_sql_query(
-        'SELECT DISTINCT ticker FROM `equities`',
-        f'sqlite:///{BASE_DIR}/../data/stox.db',
-    )['ticker']).tolist()
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_US';",
+        'sqlite:////var/stox.db',
+    )['name']).tolist()
     print(len(tickers), 'tickers')
-    
+
     return tickers

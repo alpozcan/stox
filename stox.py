@@ -30,15 +30,16 @@ from lib import market
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
 
-if not os.path.exists(f'{BASE_DIR}/data/stox.db'):
-    if os.path.exists(f'{BASE_DIR}/data/stox_db.zip'):
-        print('unpacking the database...')
-        with ZipFile(f'{BASE_DIR}/data/stox_db.zip', 'r') as zip_archive:
-            zip_archive.extractall(path=f'{BASE_DIR}/data')
-        os.remove(f'{BASE_DIR}/data/stox_db.zip')
-    else:
-        print('Error: database file could not be found. Exiting.')
-        sys.exit(1)
+def unpack_db():
+    if not os.path.exists(f'{BASE_DIR}/data/stox.db'):
+        if os.path.exists(f'{BASE_DIR}/data/stox_db.zip'):
+            print('unpacking the database...')
+            with ZipFile(f'{BASE_DIR}/data/stox_db.zip', 'r') as zip_archive:
+                zip_archive.extractall(path=f'{BASE_DIR}/data')
+            os.remove(f'{BASE_DIR}/data/stox_db.zip')
+        else:
+            print('Error: database file could not be found. Exiting.')
+            sys.exit(1)
 
 if __name__ == '__main__':
     now = datetime.datetime.now()
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
     parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
     parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
-    parser.add_argument('--startyear', default=1970, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1970.')
+    parser.add_argument('--startyear', default=1960, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1960.')
     parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
     parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
     parser.add_argument('--mock', dest='include_mock', action='store_true', help='Include predictions on mock data') ; parser.set_defaults(include_mock=False)

@@ -44,8 +44,8 @@ class DataSet:
         self.patterns = patterns
 
         self.d_market = { }
-        self.d_market['AU'] = self.get_market_data('XAO[AU]')
-        self.d_market['US'] = self.get_market_data('SPX[US]')
+#        self.d_market['AU'] = self.get_market_data('XAO[AU]')
+#        self.d_market['US'] = self.get_market_data('SPX[US]')
 
         self.multi_ts_data()
 
@@ -110,12 +110,11 @@ class DataSet:
         d_ticker = None
         if not ticker.startswith('_MOCK'):
             d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
-                                                                SELECT * FROM `equities` 
-                                                                WHERE ticker='{ticker}' 
-                                                                AND date > '{self.start_year}-01-01' 
+                                                                SELECT * FROM `{ticker}` 
+                                                                WHERE date > '{self.start_year}-01-01' 
                                                                 ORDER BY date ASC
                                                                 """,
-                                                                f'sqlite:///{BASE_DIR}/data/stox.db',
+                                                                f'sqlite:////var/stox.db',
                                                                 index_col=['date']))
         elif ticker.startswith('_MOCK_EASY'):
             print('Generating predictable data...')
@@ -124,14 +123,17 @@ class DataSet:
             print('Generating unpredictable data...')
             d_ticker = self.preprocess_ts(mock.generateRandomData())
 
-        country = ticker[ticker.find("[")+1:ticker.find("]")]
+        if len(d_ticker) <= self.lookback:
+            return pd.DataFrame()
+
+        country = ticker[ticker.find(".")+1:]
 
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
             (d_ticker['pc'], 'spc'),
-            (self.d_market[country]['pc'], 'mpc'),
-            (d_ticker['pc'] - self.d_market[country]['pc'], 'spc_minus_mpc'),
+#            (self.d_market[country]['pc'], 'mpc'),
+#            (d_ticker['pc'] - self.d_market[country]['pc'], 'spc_minus_mpc'),
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
@@ -144,10 +146,10 @@ class DataSet:
         # d_ticker['sector'] = sectors.index(companies.loc[ticker]['GICS industry group'])
         # features.append((d_ticker['sector'], 'sector'))
 
-        d_ticker['week'] = d_ticker.index.to_frame()['date'].dt.week
-        features.append((d_ticker['week'], 'week'))
+        # d_ticker['week'] = d_ticker.index.to_frame()['date'].dt.week
+        # features.append((d_ticker['week'], 'week'))
 
-        if self.ta and len(d_ticker) > self.lookback: # most of these are 'rolling window ribbon', i.e. multiple features for a range of periods up to self.lookback
+        if self.ta: # most of these are 'rolling window ribbon', i.e. multiple features for a range of periods up to self.lookback
             for i in range(2, (self.lookback + 1)):
                 features.extend([
                     (abstract.Function('AROONOSC')(d_ticker, timeperiod=i), f'AROONOSC_{i}'),
@@ -185,7 +187,7 @@ class DataSet:
         d.spc.drop(d.spc[d.spc > HIGH_OUTLIER].index, inplace=True)
         d.spc.drop(d.spc[d.spc < LOW_OUTLIER].index, inplace=True)
 
-        for c in ['spc', 'mpc', 'spc_minus_mpc', 'volume']:
+        for c in ['spc', 'volume']: # 'mpc', 'spc_minus_mpc'
             for i in range(2, (self.lookback + 1)):
                 # past values in a rolling window
                 past = d[c].shift(i)
@@ -206,12 +208,12 @@ class DataSet:
         """ Multiprocessing wrapper for quickly reading data for multiple tickers """
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
-        
+
         # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
         cardinalities = ds.apply(pd.Series.nunique)
         categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
         categorical_type_dict = { c: 'category' for c in categoricals }
-        
+
         ds = ds.astype(categorical_type_dict, copy=False)
         ds.set_index('ticker', append=True, inplace=True)
         ds.sort_index(inplace=True)
