@@ -101,14 +101,9 @@ if __name__ == '__main__':
 
         date_from = pd.to_datetime(td.index.levels[0].values[0]).strftime('%Y-%m-%d')
         date_to = pd.to_datetime(td.index.levels[0].values[-1]).strftime('%Y-%m-%d')
+
         split_index = int(len(td) * (1 - TEST_RATIO))
-
-        val_start_index = split_index + LOOKBACK
-        n_val_test_samples = len(td) - (val_start_index + 1)
-        val_samples = int(n_val_test_samples / 2)
-        val_end_index = val_start_index + val_samples
-
-        test_start_index = val_start_index + val_samples + LOOKBACK
+        test_start_index = split_index + LOOKBACK
 
         if not t.startswith('_MOCK'): # don't include mock data in training
             tds['X_train'].append(td.iloc[0:split_index][features])
