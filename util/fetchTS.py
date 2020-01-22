@@ -23,11 +23,18 @@ for c, csv in index_constituents.items():
 
 def get_ts(ticker, osize='compact'):
     ts = TimeSeries(key=KEY, output_format='pandas')
-    return ts.get_daily_adjusted(ticker, outputsize=osize)
+    return ts.get_daily(ticker, outputsize=osize) # TODO: get_daily_adjusted instead
 
-shuffle(tickers)
-tickers = [{ 'ticker': '^SPX' , 'country_suffix': '', 'symbol_suffix': '' }] + tickers
-tickers = [{ 'ticker': '^AORD', 'country_suffix': '', 'symbol_suffix': '' }] + tickers
+# get_daily columns:
+# ['1. open', '2. high', '3. low', '4. close', '5. volume']
+
+# get_daily_adjusted columns:
+# ['1. open', '2. high', '3. low', '4. close', '5. adjusted close',
+#        '6. volume', '7. dividend amount', '8. split coefficient']
+
+# shuffle(tickers)
+# tickers = [{ 'ticker': '^SPX' , 'country_suffix': '', 'symbol_suffix': '' }] + tickers
+# tickers = [{ 'ticker': '^AORD', 'country_suffix': '', 'symbol_suffix': '' }] + tickers
 print(tickers)
 n_tickers = len(tickers)
 
