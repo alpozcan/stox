@@ -33,7 +33,7 @@ MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be consider
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, start_year=1970, imputate=True, resample='no', ta=True, patterns=True):
+    def __init__(self, tickers, lookback, lookfwd, start_year=1960, imputate=True, resample='no', ta=True, patterns=True):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
@@ -43,24 +43,22 @@ class DataSet:
         self.ta = ta
         self.patterns = patterns
 
-        self.d_market = { }
-#        self.d_market['AU'] = self.get_market_data('XAO[AU]')
-#        self.d_market['US'] = self.get_market_data('SPX[US]')
+        self.d_index, self.index_features = {}, {}
+        self.d_index['US'] = self.get_index_data('US/^GSPC')
+        self.index_features['US'] = self.generate_ta_features(self.d_index['US'], 'i')
 
         self.multi_ts_data()
 
-    def get_market_data(self, market_index):
-        return self.preprocess_ts(pd.read_sql_query(    f"""
-                                                        SELECT date, open, close FROM `indices` 
-                                                        WHERE ticker='{market_index}' 
-                                                        AND date > '{self.start_year}-01-01' 
-                                                        ORDER BY date ASC
-                                                        """,
-                                                        f'sqlite:///{BASE_DIR}/data/stox.db',
-                                                        index_col=['date']))
+    def get_index_data(self, index_csv):
+        return self.preprocess_ts(pd.read_csv(  f'{BASE_DIR}/data/indices/{index_csv}.csv.xz',
+                                                usecols=[0,1,2,3,4,6],
+                                                parse_dates=True,
+                                                skiprows=[0],
+                                                names=['date', 'open', 'high', 'low', 'close', 'volume'],
+                                                index_col=['date']))
 
     def preprocess_ts(self, d):
-        """ Preprecess time series data """
+        """ Preprocess time series data """
         d.index = pd.to_datetime(d.index)
 
         # gap detection
@@ -82,6 +80,10 @@ class DataSet:
             if 'low' in d.columns:
                 d.low[(d.low == 0 | d.low.isnull()) & (d.close > d.open)] = d.open
                 d.low[(d.low == 0 | d.low.isnull()) & (d.close <= d.open)] = d.close
+
+        # pad (forward fill) for weekend days so that resampling to longer periods don't result in gaps
+        d = d.resample('D').pad()
+        d.at[d.index.weekday > 4, 'volume'] = 0
 
         # resample
         if self.resample != 'no':
@@ -105,9 +107,42 @@ class DataSet:
 
         return d
 
+    def generate_ta_features(self, data, prefix=''):
+        features = []
+        for i in range(2, (self.lookback + 1)):
+            features.extend([
+                (abstract.Function('AROONOSC')(data, timeperiod=i), f'{prefix}AROONOSC_{i}'),
+                (abstract.Function('ATR')(data, timeperiod=i) / data['price'], f'{prefix}ATR_{i}'),
+                (abstract.Function('CORREL')(data, timeperiod=i), f'{prefix}CORREL_{i}'),
+                (abstract.Function('BETA')(data, timeperiod=i), f'{prefix}BETA_{i}'),
+                (abstract.Function('CMO')(data, timeperiod=i), f'{prefix}CMO_{i}'),
+                (abstract.Function('CCI')(data, timeperiod=i), f'{prefix}CCI_{i}')
+            ])
+            if i >= 6: # these indicators don't work well with very small period sizes
+                features.extend([
+                    (abstract.Function('STOCHF')(data, fastk_period=i, fastd_period=int(round(i * 3 / 5)))['fastk'], f'{prefix}STOCHF_K_{i}'),
+                    (abstract.Function('STOCH')(data, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowd'], f'{prefix}STOCH_D_{i}'),
+                    (abstract.Function('STOCH')(data, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowk'], f'{prefix}STOCH_K_{i}'),
+                    (abstract.Function('ULTOSC')(data, timeperiod1=int(round(i / 3)), timeperiod2=int(round(i / 2)), timeperiod3=i), f'{prefix}ULTOSC_{i}'),
+                    (abstract.Function('ADOSC')(data, fastperiod=int(round(i * 3 / 10)), slowperiod=i), f'{prefix}ADOSC_{i}')
+                ])
+
+        features.extend([
+            (abstract.Function('HT_TRENDMODE')(data), f'{prefix}HT_TRENDMODE'), # other HT_ functions cause extra drops
+            (abstract.Function('MFI')(data), f'{prefix}MFI'),
+            (abstract.Function('BOP')(data), f'{prefix}BOP')
+        ])
+
+        if self.patterns:
+            for pattern in ta.get_function_groups()['Pattern Recognition']:
+                features.append((abstract.Function(pattern)(data), prefix + pattern))
+
+        return features
+
     def ts_data(self, ticker): # price changes of both the security and the market
         """ Fetch time series data for the requested ticker and generate features """
         d_ticker = None
+        country = ticker[-2:]
         if not ticker.startswith('_MOCK'):
             d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
                                                                 SELECT * FROM `{ticker}` 
@@ -126,18 +161,18 @@ class DataSet:
         if len(d_ticker) <= self.lookback:
             return pd.DataFrame()
 
-        country = ticker[ticker.find(".")+1:]
-
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
             (d_ticker['pc'], 'spc'),
-#            (self.d_market[country]['pc'], 'mpc'),
-#            (d_ticker['pc'] - self.d_market[country]['pc'], 'spc_minus_mpc'),
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
-            (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume')
+            (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume'),
+
+            (self.d_index[country]['pc'], 'ipc'),
+            (d_ticker['pc'] - self.d_index[country]['pc'], 'spc_minus_ipc'),
+            # (self.d_index['volume'] / self.d_index['volume'].mean(), 'ivolume')
             ]
 
         d_ticker['ticker'] = ticker # will be used as index
@@ -150,57 +185,31 @@ class DataSet:
         # features.append((d_ticker['week'], 'week'))
 
         if self.ta: # most of these are 'rolling window ribbon', i.e. multiple features for a range of periods up to self.lookback
-            for i in range(2, (self.lookback + 1)):
-                features.extend([
-                    (abstract.Function('AROONOSC')(d_ticker, timeperiod=i), f'AROONOSC_{i}'),
-                    (abstract.Function('ATR')(d_ticker, timeperiod=i) / d_ticker['price'], f'ATR_{i}'),
-                    (abstract.Function('CORREL')(d_ticker, timeperiod=i), f'CORREL_{i}'),
-                    (abstract.Function('BETA')(d_ticker, timeperiod=i), f'BETA_{i}'),
-                    (abstract.Function('CMO')(d_ticker, timeperiod=i), f'CMO_{i}'),
-                    (abstract.Function('CCI')(d_ticker, timeperiod=i), f'CCI_{i}')
-                ])
-                if i >= 6: # these indicators don't work well with very small period sizes
-                    features.extend([
-                        (abstract.Function('STOCHF')(d_ticker, fastk_period=i, fastd_period=int(round(i * 3 / 5)))['fastk'], f'STOCHF_K_{i}'),
-                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowd'], f'STOCH_D_{i}'),
-                        (abstract.Function('STOCH')(d_ticker, fastk_period=i, slowk_period=int(round(i * 3 / 5)), slowd_period=int(round(i * 3 / 5)))['slowk'], f'STOCH_K_{i}'),
-                        (abstract.Function('ULTOSC')(d_ticker, timeperiod1=int(round(i / 3)), timeperiod2=int(round(i / 2)), timeperiod3=i), f'ULTOSC_{i}'),
-                        (abstract.Function('ADOSC')(d_ticker, fastperiod=int(round(i * 3 / 10)), slowperiod=i), f'ADOSC_{i}')
-                    ])
+            features.extend(self.generate_ta_features(d_ticker))
 
-            features.extend([
-                (abstract.Function('HT_TRENDMODE')(d_ticker), 'HT_TRENDMODE'), # other HT_ functions cause extra drops
-                (abstract.Function('MFI')(d_ticker), 'MFI'),
-                (abstract.Function('BOP')(d_ticker), 'BOP')
-            ])
-
-            if self.patterns:
-                for pattern in ta.get_function_groups()['Pattern Recognition']:
-                    features.append((abstract.Function(pattern)(d_ticker), pattern))
-
-        d = pd.concat([d[0] for d in features], axis=1, sort=False)
-        d.columns = [d[1] for d in features]
-
-        d.volume[d.volume == 0] = np.nan # Get rid of zero-volume samples
+        d = pd.concat([d[0] for d in (features + self.index_features[country])], axis=1, sort=False)
+        d.columns = [d[1] for d in (features + self.index_features[country])]
 
         # Filter out outliers
         d.spc.drop(d.spc[d.spc > HIGH_OUTLIER].index, inplace=True)
         d.spc.drop(d.spc[d.spc < LOW_OUTLIER].index, inplace=True)
 
-        for c in ['spc', 'volume']: # 'mpc', 'spc_minus_mpc'
+        # past values in a rolling window
+        for c in ['spc', 'ipc', 'spc_minus_ipc', 'volume']:
             for i in range(2, (self.lookback + 1)):
-                # past values in a rolling window
-                past = d[c].shift(i)
-                d = pd.concat([d, past.rename(f'past_{c}_{i}')], axis=1)
-                # linear regression slopes
+                d = pd.concat([d, d[c].shift(i).rename(f'past_{c}_{i}')], axis=1)
                 d = pd.concat([d, (abstract.Function('LINEARREG_SLOPE')(d, price=c, timeperiod=i)).rename(f'LINEARREG_SLOPE_{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)
 
-        d = pd.concat([d, future.rename('future')], axis=1).dropna()
+        d = pd.concat([d, future.rename('future')], axis=1)
         d = pd.concat([d, predictor], axis=0, sort=False)
+
         d.drop(['price', 'open', 'close'], axis=1, inplace=True)
+        d.volume[d.volume == 0] = np.nan # Get rid of zero-volume samples
+        d.future[d.future == 0] = np.nan # Also where the target is zero
+        d.dropna(inplace=True)
 
         return d
 

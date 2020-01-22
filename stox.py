@@ -78,7 +78,6 @@ if __name__ == '__main__':
     # sectors = market.sectors()
 
     ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, start_year=START_YEAR, resample=RESAMPLE).data
-    ds = ds[ds.future != 0].dropna()
 
     features = list(ds.columns)
     features.remove('future') # remove the target variable from features, duh
