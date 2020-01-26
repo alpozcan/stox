@@ -54,7 +54,7 @@ class DataSet:
     def get_index_data(self, index_ticker):
         return self.preprocess_ts(pd.read_sql_query(    f"""
                                                         SELECT * FROM `^{index_ticker}` 
-                                                        WHERE date > '{self.start_year}-01-01' 
+                                                        WHERE date >= '{self.start_year}-01-01' 
                                                         ORDER BY date ASC
                                                         """,
                                                         f'sqlite:////var/stox/stox.db',
@@ -148,7 +148,7 @@ class DataSet:
         if not ticker.startswith('_MOCK'):
             d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
                                                                 SELECT * FROM `{ticker}` 
-                                                                WHERE date > '{self.start_year}-01-01' 
+                                                                WHERE date >= '{self.start_year}-01-01' 
                                                                 ORDER BY date ASC
                                                                 """,
                                                                 f'sqlite:////var/stox/stox.db',
