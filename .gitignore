@@ -1,7 +1,5 @@
-data/stox.db
+data/
 !data/stox_db.zip
-data/equities
-data/indices
 
 results/*.csv
 !results/2019-12-23-12-30-19.csv

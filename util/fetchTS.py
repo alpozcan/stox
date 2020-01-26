@@ -11,14 +11,16 @@ SLEEP = 12
 ATTEMPTS = 5
 
 index_constituents = { }
-index_constituents['AU'] = open('../data/indices/AU/XAO_Makeup.csv') # workaround LookupError: unknown encoding: mbcs
-index_constituents['US'] = open('../data/indices/US/SP500.csv')
+index_constituents['AU'] = open('../data/indices/constituents/XAO_Makeup.csv') # workaround LookupError: unknown encoding: mbcs
+index_constituents['US'] = open('../data/indices/constituents/SP500.csv')
 
 tickers = []
 for c, csv in index_constituents.items():
     index_tickers = pd.read_csv(csv, usecols=[0], skiprows=[0]).iloc[:,0].tolist()
     for ticker in index_tickers:
         tickers.append({ 'ticker': ticker, 'country_suffix': c, 'symbol_suffix': ('.AX' if c == 'AU' else '') })
+
+tickers = [ '^AORD' ]
 
 def get_ts(ticker, osize='compact'):
     ts = TimeSeries(output_format='pandas')

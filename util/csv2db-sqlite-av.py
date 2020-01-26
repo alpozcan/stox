@@ -14,10 +14,8 @@ in_dir = sys.argv[1]
 ext = sys.argv[2]
 
 files = [ f for f in listdir(in_dir) if isfile(join(in_dir, f)) and f.endswith(ext) ]
-tickers = [ '.'.join(f.split('.')[:-2]).upper() for f in files ]
-
-assert '_' in tickers[-1] # Make sure it has the country suffix
-
+tickers = [ '.'.join(f.split('.')[:-1]).upper() for f in files ]
+tickers = [ '^GSPC', '^AORD' ]
 engine = sa.create_engine('sqlite:////tmp/stox.db', echo=False)
 
 for f, t in zip(files, tickers):
@@ -25,7 +23,7 @@ for f, t in zip(files, tickers):
     try:
         df = pd.read_csv(
             (join(in_dir, f)),
-            usecols=range(6),
+            usecols=[0,1,2,3,5,6],
             parse_dates=True,
             skiprows=[0],
             names=['date', 'open', 'high', 'low', 'close', 'volume'],

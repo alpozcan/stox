@@ -44,18 +44,21 @@ class DataSet:
         self.patterns = patterns
 
         self.d_index, self.index_features = {}, {}
-        self.d_index['US'] = self.get_index_data('US/^GSPC')
+        self.d_index['US'] = self.get_index_data('GSPC')
+        self.d_index['AU'] = self.get_index_data('AORD')
         self.index_features['US'] = self.generate_ta_features(self.d_index['US'], 'i')
+        self.index_features['AU'] = self.generate_ta_features(self.d_index['AU'], 'i')
 
         self.multi_ts_data()
 
-    def get_index_data(self, index_csv):
-        return self.preprocess_ts(pd.read_csv(  f'{BASE_DIR}/data/indices/{index_csv}.csv.xz',
-                                                usecols=[0,1,2,3,4,6],
-                                                parse_dates=True,
-                                                skiprows=[0],
-                                                names=['date', 'open', 'high', 'low', 'close', 'volume'],
-                                                index_col=['date']))
+    def get_index_data(self, index_ticker):
+        return self.preprocess_ts(pd.read_sql_query(    f"""
+                                                        SELECT * FROM `^{index_ticker}` 
+                                                        WHERE date > '{self.start_year}-01-01' 
+                                                        ORDER BY date ASC
+                                                        """,
+                                                        f'sqlite:////var/stox/stox.db',
+                                                        index_col=['date']))
 
     def preprocess_ts(self, d):
         """ Preprocess time series data """
@@ -141,7 +144,6 @@ class DataSet:
 
     def ts_data(self, ticker): # price changes of both the security and the market
         """ Fetch time series data for the requested ticker and generate features """
-        d_ticker = None
         country = ticker[-2:]
         if not ticker.startswith('_MOCK'):
             d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
@@ -149,7 +151,7 @@ class DataSet:
                                                                 WHERE date > '{self.start_year}-01-01' 
                                                                 ORDER BY date ASC
                                                                 """,
-                                                                f'sqlite:////var/stox.db',
+                                                                f'sqlite:////var/stox/stox.db',
                                                                 index_col=['date']))
         elif ticker.startswith('_MOCK_EASY'):
             print('Generating predictable data...')
@@ -205,6 +207,10 @@ class DataSet:
 
         d = pd.concat([d, future.rename('future')], axis=1)
         d = pd.concat([d, predictor], axis=0, sort=False)
+
+        # debug
+        # if ticker == 'GE_US' or ticker == 'ANZ_AU':
+        #     d.to_csv(f'{BASE_DIR}/debug/{ticker}.csv')
 
         d.drop(['price', 'open', 'close'], axis=1, inplace=True)
         d.volume[d.volume == 0] = np.nan # Get rid of zero-volume samples
