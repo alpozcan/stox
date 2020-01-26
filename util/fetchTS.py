@@ -7,7 +7,6 @@ from alpha_vantage.timeseries import TimeSeries
 import sys
 
 BASE_DIR = path.dirname(path.realpath(__file__))
-KEY='IOJ838PQYYIG9JCQ'
 SLEEP = 12
 ATTEMPTS = 5
 
@@ -19,11 +18,11 @@ tickers = []
 for c, csv in index_constituents.items():
     index_tickers = pd.read_csv(csv, usecols=[0], skiprows=[0]).iloc[:,0].tolist()
     for ticker in index_tickers:
-        tickers.append({ 'ticker': ticker, 'country_suffix': ('_' + c), 'symbol_suffix': ('.AX' if c == 'AU' else '') })
+        tickers.append({ 'ticker': ticker, 'country_suffix': c, 'symbol_suffix': ('.AX' if c == 'AU' else '') })
 
 def get_ts(ticker, osize='compact'):
-    ts = TimeSeries(key=KEY, output_format='pandas')
-    return ts.get_daily(ticker, outputsize=osize) # TODO: get_daily_adjusted instead
+    ts = TimeSeries(output_format='pandas')
+    return ts.get_daily_adjusted(ticker, outputsize=osize) # TODO: get_daily_adjusted instead
 
 # get_daily columns:
 # ['1. open', '2. high', '3. low', '4. close', '5. volume']
@@ -33,9 +32,8 @@ def get_ts(ticker, osize='compact'):
 #        '6. volume', '7. dividend amount', '8. split coefficient']
 
 # shuffle(tickers)
-# tickers = [{ 'ticker': '^SPX' , 'country_suffix': '', 'symbol_suffix': '' }] + tickers
-# tickers = [{ 'ticker': '^AORD', 'country_suffix': '', 'symbol_suffix': '' }] + tickers
-print(tickers)
+tickers = [{ 'ticker': '^SPX' , 'country_suffix': '', 'symbol_suffix': '' }] + tickers
+tickers = [{ 'ticker': '^AORD', 'country_suffix': '', 'symbol_suffix': '' }] + tickers
 n_tickers = len(tickers)
 
 def write_csv(data, csvfile):
@@ -55,15 +53,18 @@ def write_csv(data, csvfile):
 # Fetch timeseries data from AlphaVantage
 counter = 0
 for t in tickers:
-    tsdata_file = '../data/equities/' + f"{t['country_suffix']}/" + t['ticker'] + t['country_suffix'] + '.csv'
+    tsdata_file = '../data/equities/' + f"{t['country_suffix']}/" + t['ticker'] + '_' + t['country_suffix'] + '.csv'
+    if t['ticker'].startswith('^'):
+        tsdata_file = '../data/indices/' + t['ticker'] + '.csv'
     tsdata, metadata = None, None
     fetch_size = 'compact' if path.exists(tsdata_file) else 'full'
     print('\nFetching', t['ticker'] + t['symbol_suffix'], f'({counter} of {n_tickers})', 'attempt', ': ', end = '')
     for attempt in range(ATTEMPTS):
         print((attempt + 1), end = ' ')
         try:
-            tsdata, metadata = av.get_ts(t['ticker'] + t['symbol_suffix'], osize=fetch_size)
-        except:
+            tsdata, metadata = get_ts(t['ticker'] + t['symbol_suffix'], osize=fetch_size)
+        except Exception as e:
+            print(e)
             if attempt == ATTEMPTS:
                 print('giving up.')
                 break
@@ -73,16 +74,6 @@ for t in tickers:
         print('Fetched', len(tsdata), 'rows.')
         break
     if isinstance(tsdata, pd.DataFrame) and len(tsdata) > 0:
-        # add the ticker column
-        tsdata['ticker'] = t['ticker'] + t['country_suffix']
-        cols = tsdata.columns.tolist()
-        cols = cols[-1:] + cols[:-1] # make ticker the first column
-        tsdata = tsdata[cols]
-
-        print(tsadata)
-        sys.exit()
-
-        tsdata.columns = [ 'ticker', 'date', 'open', 'high', 'low', 'close', 'volume' ]
         write_csv(tsdata, tsdata_file)
 
     sleep(SLEEP / 2)
