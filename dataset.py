@@ -23,7 +23,7 @@ import pandas as pd
 import talib as ta
 from talib import abstract
 import multiprocessing, os
-from lib import market, mock
+from lib import market
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -33,11 +33,11 @@ MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be consider
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, start_year=1960, imputate=True, resample='no', ta=True, patterns=True):
+    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
-        self.start_year = start_year
+        self.predicate = predicate
         self.imputate = imputate
         self.resample = resample
         self.ta = ta
@@ -54,7 +54,7 @@ class DataSet:
     def get_index_data(self, index_ticker):
         return self.preprocess_ts(pd.read_sql_query(    f"""
                                                         SELECT * FROM `^{index_ticker}` 
-                                                        WHERE date >= '{self.start_year}-01-01' 
+                                                        WHERE {self.predicate} 
                                                         ORDER BY date ASC
                                                         """,
                                                         f'sqlite:////var/stox/stox.db',
@@ -145,20 +145,13 @@ class DataSet:
     def ts_data(self, ticker): # price changes of both the security and the market
         """ Fetch time series data for the requested ticker and generate features """
         country = ticker[-2:]
-        if not ticker.startswith('_MOCK'):
-            d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
-                                                                SELECT * FROM `{ticker}` 
-                                                                WHERE date >= '{self.start_year}-01-01' 
-                                                                ORDER BY date ASC
-                                                                """,
-                                                                f'sqlite:////var/stox/stox.db',
-                                                                index_col=['date']))
-        elif ticker.startswith('_MOCK_EASY'):
-            print('Generating predictable data...')
-            d_ticker = self.preprocess_ts(mock.generatePredictableData())
-        elif ticker.startswith('_MOCK_HARD'):
-            print('Generating unpredictable data...')
-            d_ticker = self.preprocess_ts(mock.generateRandomData())
+        d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
+                                                            SELECT * FROM `{ticker}` 
+                                                            WHERE {self.predicate}  
+                                                            ORDER BY date ASC
+                                                            """,
+                                                            f'sqlite:////var/stox/stox.db',
+                                                            index_col=['date']))
 
         if len(d_ticker) <= self.lookback:
             return pd.DataFrame()
@@ -174,7 +167,7 @@ class DataSet:
 
             (self.d_index[country]['pc'], 'ipc'),
             (d_ticker['pc'] - self.d_index[country]['pc'], 'spc_minus_ipc'),
-            # (self.d_index['volume'] / self.d_index['volume'].mean(), 'ivolume')
+            # (self.d_index[country]['volume'] / self.d_index[country]['volume'].mean(), 'ivolume')
             ]
 
         d_ticker['ticker'] = ticker # will be used as index

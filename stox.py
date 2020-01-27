@@ -43,10 +43,8 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
     parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
     parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
-    parser.add_argument('--startyear', default=1960, help='Only use samples newer than the start of the year given. Can be used for reducing the dataset size where there are memory/time constraints. Default: 1960.')
     parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
     parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
-    parser.add_argument('--mock', dest='include_mock', action='store_true', help='Include predictions on mock data') ; parser.set_defaults(include_mock=False)
 
     TEST_RATIO = 1 / int(parser.parse_args().ratio)
     SIZE = int(parser.parse_args().size) # Trees
@@ -54,31 +52,32 @@ if __name__ == '__main__':
     VERBOSE = int(parser.parse_args().verbose)
     LOOKBACK = int(parser.parse_args().lookback)
     LOOKFWD = int(parser.parse_args().lookfwd)
-    START_YEAR = parser.parse_args().startyear
     RESAMPLE = parser.parse_args().resample
     REGRESSOR = parser.parse_args().regressor
-    MOCK = parser.parse_args().include_mock
 
     MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
-    tickers = market.all_stocks() if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
+    tickers = market.all_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
 
-    # companies = market.companies() # columns: Company name,ASX code,GICS industry group
-    # sectors = market.sectors()
+    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate="date < '2016-01-01'", resample=RESAMPLE).data
+    if VERBOSE > 0:
+        print('\n--------------------------- Train dataset ---------------------------')
+        print(ds_train.describe())
+        print(ds_train.info(memory_usage='deep'))
 
-    ds = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, start_year=START_YEAR, resample=RESAMPLE).data
+    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate="date >= '2016-01-01'", resample=RESAMPLE).data
+    if VERBOSE > 0:
+            print('\n--------------------------- Test dataset ----------------------------')
+            print(ds_test.info(memory_usage='deep'))
+            print(ds_test.describe())
 
-    features = list(ds.columns)
+    features = list(ds_train.columns)
     features.remove('future') # remove the target variable from features, duh
 
-    tds = { 'X_train': [], 'X_test': [], 'y_train': [], 'y_test': [] }
     predictors = None
-
-    if VERBOSE > 0:
-        print(ds.info(memory_usage='deep'))
-        print(ds.describe())
-
-    for t, td in ds.groupby(level=1):
+    for t, td in ds_test.groupby(level=1):
+        if len(td) < MIN_TEST_SAMPLES:
+            continue # too few test samples to predict confidently
         predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
         predictor['ticker'] = t
         if predictors is None:
@@ -86,26 +85,11 @@ if __name__ == '__main__':
         else:
             predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
 
-        td.drop(td.tail(1).index,inplace=True) # remove the predictor from the bottom of the dataframe
+    X_train = ds_train[features]
+    y_train = ds_train['future']
 
-        date_from = pd.to_datetime(td.index.levels[0].values[0]).strftime('%Y-%m-%d')
-        date_to = pd.to_datetime(td.index.levels[0].values[-1]).strftime('%Y-%m-%d')
-
-        split_index = int(len(td) * (1 - TEST_RATIO))
-        test_start_index = split_index + LOOKBACK
-
-        if not t.startswith('_MOCK'): # don't include mock data in training
-            tds['X_train'].append(td.iloc[0:split_index][features])
-            tds['y_train'].append(td.iloc[0:split_index]['future'])
-
-        tds['X_test'].append(td.iloc[test_start_index:][features])
-        tds['y_test'].append(td.iloc[test_start_index:]['future'])
-
-    X_train = pd.concat(tds['X_train'], axis = 0, copy=False)
-    y_train = pd.concat(tds['y_train'], axis = 0, copy=False)
-
-    X_test = pd.concat(tds['X_test'], axis = 0, copy=False)
-    y_test = pd.concat(tds['y_test'], axis = 0, copy=False)
+    X_test = ds_test[features]
+    y_test = ds_test['future']
 
     print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
                 'y_train:', y_train.shape, 'y_test:', y_test.shape )
@@ -140,13 +124,7 @@ if __name__ == '__main__':
 
         try:
             xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
-
         except KeyError:
-            continue
-
-        if len(xT) < MIN_TEST_SAMPLES:
-            if VERBOSE > 0:
-                print('Not predicting', t, f'as it has less than {MIN_TEST_SAMPLES} test samples')
             continue
 
         predictions = model.predict(xT)
