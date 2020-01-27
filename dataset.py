@@ -207,7 +207,7 @@ class DataSet:
 
         d.drop(['price', 'open', 'close'], axis=1, inplace=True)
         d.volume[d.volume == 0] = np.nan # Get rid of zero-volume samples
-        d.future[d.future == 0] = np.nan # Also where the target is zero
+        # d.future[d.future == 0] = np.nan # Also where the target is zero
         d.dropna(inplace=True)
 
         return d
