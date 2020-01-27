@@ -55,21 +55,22 @@ if __name__ == '__main__':
     RESAMPLE = parser.parse_args().resample
     REGRESSOR = parser.parse_args().regressor
 
+    SPLIT_DATE = '2016-01-01' # Train/test split cutoff date
     MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
     tickers = market.all_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
 
-    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate="date < '2016-01-01'", resample=RESAMPLE).data
+    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
     if VERBOSE > 0:
         print('\n--------------------------- Train dataset ---------------------------')
         print(ds_train.describe())
         print(ds_train.info(memory_usage='deep'))
 
-    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate="date >= '2016-01-01'", resample=RESAMPLE).data
+    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE).data
     if VERBOSE > 0:
             print('\n--------------------------- Test dataset ----------------------------')
-            print(ds_test.info(memory_usage='deep'))
             print(ds_test.describe())
+            print(ds_test.info(memory_usage='deep'))
 
     features = list(ds_train.columns)
     features.remove('future') # remove the target variable from features, duh
