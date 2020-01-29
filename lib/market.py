@@ -28,3 +28,21 @@ def all_stocks():
     print(len(tickers), 'tickers')
 
     return tickers
+
+def au_stocks():
+    tickers = pd.Series(data=pd.read_sql_query(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_AU';",
+        'sqlite:////var/stox/stox.db',
+    )['name']).tolist()
+    print(len(tickers), 'tickers')
+
+    return tickers
+
+def us_stocks():
+    tickers = pd.Series(data=pd.read_sql_query(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_US';",
+        'sqlite:////var/stox/stox.db',
+    )['name']).tolist()
+    print(len(tickers), 'tickers')
+
+    return tickers

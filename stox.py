@@ -59,6 +59,7 @@ if __name__ == '__main__':
     MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
     tickers = market.all_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
+    tickers_au, tickers_us = market.au_stocks(), market.us_stocks()
 
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
     if VERBOSE > 0:
