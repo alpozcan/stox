@@ -121,6 +121,10 @@ class DataSet:
                 (abstract.Function('CMO')(data, timeperiod=i), f'{prefix}CMO_{i}'),
                 (abstract.Function('CCI')(data, timeperiod=i), f'{prefix}CCI_{i}')
             ])
+
+            for c in ['close', 'volume']:
+                features.append((abstract.Function('LINEARREG_SLOPE')(data, price=c, timeperiod=i), f'{prefix}LINEARREG_SLOPE_{c}_{i}'))
+
             if i >= 6: # these indicators don't work well with very small period sizes
                 features.extend([
                     (abstract.Function('STOCHF')(data, fastk_period=i, fastd_period=int(round(i * 3 / 5)))['fastk'], f'{prefix}STOCHF_K_{i}'),
@@ -193,7 +197,6 @@ class DataSet:
         for c in ['spc', 'ipc', 'spc_minus_ipc', 'volume']:
             for i in range(2, (self.lookback + 1)):
                 d = pd.concat([d, d[c].shift(i).rename(f'past_{c}_{i}')], axis=1)
-                d = pd.concat([d, (abstract.Function('LINEARREG_SLOPE')(d, price=c, timeperiod=i)).rename(f'LINEARREG_SLOPE_{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
         future = d['spc'].shift(self.lookfwd * -1)

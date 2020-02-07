@@ -18,8 +18,8 @@ LOOKBACK = int(parser.parse_args().lookback)
 LOOKFWD = int(parser.parse_args().lookfwd)
 RESAMPLE = parser.parse_args().resample
 
-VALIDATE_FROM = '2012-01-01' # Train/test split cutoff date
-TEST_FROM = '2016-01-01' # Train/test split cutoff date
+VALIDATE_FROM = '2010-01-01' # Train/test split cutoff date
+TEST_FROM = '2015-01-01' # Train/test split cutoff date
 
 tickers = market.all_stocks()
 

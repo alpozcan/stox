@@ -37,7 +37,7 @@ if __name__ == '__main__':
     timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ratio', default=5, help='Denominator of train/test split ratio. Default is 5, meaning a 80/20 percent train/test split.')
+    parser.add_argument('--split-date', default='2011-01-01', help='train/test split date. Default : 2016-01-01')
     parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
     parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
     parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
@@ -45,8 +45,9 @@ if __name__ == '__main__':
     parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
     parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
     parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
+    parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 
-    TEST_RATIO = 1 / int(parser.parse_args().ratio)
+    SPLIT_DATE = parser.parse_args().split_date
     SIZE = int(parser.parse_args().size) # Trees
     SEED = int(parser.parse_args().seed)
     VERBOSE = int(parser.parse_args().verbose)
@@ -54,12 +55,12 @@ if __name__ == '__main__':
     LOOKFWD = int(parser.parse_args().lookfwd)
     RESAMPLE = parser.parse_args().resample
     REGRESSOR = parser.parse_args().regressor
+    DUMP = parser.parse_args().dump
 
-    SPLIT_DATE = '2016-01-01' # Train/test split cutoff date
     MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
-    tickers = market.all_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
-    tickers_au, tickers_us = market.au_stocks(), market.us_stocks()
+    tickers = market.us_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
+    # tickers_au, tickers_us = market.au_stocks(), market.us_stocks()
 
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
     if VERBOSE > 0:
@@ -72,6 +73,10 @@ if __name__ == '__main__':
             print('\n--------------------------- Test dataset ----------------------------')
             print(ds_test.describe())
             print(ds_test.info(memory_usage='deep'))
+
+    if DUMP:
+        ds_train.to_csv(f'{BASE_DIR}/output/ds_train.csv.gz')
+        ds_test.to_csv(f'{BASE_DIR}/output/ds_test.csv.gz')
 
     features = list(ds_train.columns)
     features.remove('future') # remove the target variable from features, duh
