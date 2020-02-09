@@ -36,7 +36,7 @@ day_of_week = 'FRI' if day_of_week in ['SAT', 'SUN'] else day_of_week
 timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--split-date', default='2015-01-01', help='train/test split date. Default : 2015-01-01')
+parser.add_argument('--split-date', default='2014-01-01', help='train/test split date. Default : 2015-01-01')
 parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
@@ -106,7 +106,10 @@ time_start_tr = perf_counter()
 model.fit(X_train, y_train)
 print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
-if VERBOSE > 0:
+if REGRESSOR == 'TPOT':
+    model.export(f'{BASE_DIR}/tpot-pipelines/final.py')
+
+if VERBOSE > 0 and hasattr(model, feature_importances_):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi.sort_values('importance', ascending=False))
 

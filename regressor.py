@@ -19,6 +19,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+
 class Regressor():
     def __init__(self, kind, size, seed, verbosity):
         self.kind, self.size, self.seed, self.verbosity = kind, size, seed, verbosity
@@ -45,6 +49,24 @@ class Regressor():
         elif kind == 'ETR':
             from sklearn.ensemble import ExtraTreesRegressor
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
+
+        elif kind == 'TPOT':
+            from tpot import TPOTRegressor
+            self.model = TPOTRegressor(     generations=100, population_size=100,
+                                            offspring_size=None, mutation_rate=0.9,
+                                            crossover_rate=0.1,
+                                            scoring='neg_mean_absolute_error', cv=4,
+                                            subsample=1.0, n_jobs=-1,
+                                            max_time_mins=None, max_eval_time_mins=360,
+                                            random_state=None, config_dict=None,
+                                            template=None,
+                                            warm_start=False,
+                                            memory=None,
+                                            use_dask=False,
+                                            periodic_checkpoint_folder=f'{BASE_DIR}/tpot-pipelines',
+                                            early_stop=5,
+                                            verbosity=self.verbosity,
+                                            disable_update_check=True)
 
         else:
             print(f"Unrecognised regressor type '{kind}'")
