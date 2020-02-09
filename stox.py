@@ -109,7 +109,7 @@ print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 if REGRESSOR == 'TPOT':
     model.export(f'{BASE_DIR}/tpot-pipelines/final.py')
 
-if VERBOSE > 0 and hasattr(model, feature_importances_):
+if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi.sort_values('importance', ascending=False))
 
