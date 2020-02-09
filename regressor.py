@@ -51,11 +51,6 @@ class Regressor():
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
         elif kind == 'TPOT':
-            from dask.distributed import Client, LocalCluster
-            dask_cluster = LocalCluster('192.168.1.5:8787')
-            dask_client = Client()
-            print(dask_cluster, dask_client)
-
             from tpot import TPOTRegressor
             self.model = TPOTRegressor(     generations=100, population_size=100, offspring_size=None,
                                             mutation_rate=0.9, crossover_rate=0.1,
