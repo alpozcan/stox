@@ -61,13 +61,13 @@ MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individua
 tickers = market.us_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
 # tickers_au, tickers_us = market.au_stocks(), market.us_stocks()
 
-ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
+ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
 if VERBOSE > 0:
     print('\n--------------------------- Train dataset ---------------------------')
     print(ds_train.describe())
     print(ds_train.info(memory_usage='deep'))
 
-ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE).data
+ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
 if VERBOSE > 0:
         print('\n--------------------------- Test dataset ----------------------------')
         print(ds_test.describe())

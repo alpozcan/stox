@@ -50,6 +50,14 @@ class Regressor():
             from sklearn.ensemble import ExtraTreesRegressor
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
+        elif kind == 'XGB': # parameters based on h2o automl results
+            from xgboost import XGBRegressor
+            self.model = XGBRegressor(  n_estimators=105, max_depth=15, learning_rate=0.05,
+                                        min_child_weight=3, subsample=0.6,
+                                        colsample_bylevel=0.6, colsample_bytree=0.9,
+                                        reg_lambda=100, reg_alpha=0.01,
+                                        random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
+
         elif kind == 'TPOT':
             from tpot import TPOTRegressor
             self.model = TPOTRegressor(     generations=100, population_size=100, offspring_size=None,
