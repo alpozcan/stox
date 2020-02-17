@@ -103,15 +103,20 @@ print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
 model = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE).model
 
 time_start_tr = perf_counter()
-model.fit(X_train, y_train)
-print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
-if REGRESSOR == 'TPOT':
-    model.export(f'{BASE_DIR}/tpot-pipelines/final.py')
+if not REGRESSOR.endswith('hypopt'):
+    model.fit(X_train, y_train)
+else:
+    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error')
+
+print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
 if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi.sort_values('importance', ascending=False))
+
+if REGRESSOR.endswith('hypopt'):
+    print('Optimised model:', model, sep='\n')
 
 predictors.set_index('ticker', inplace=True)
 predictors.sort_index(inplace=True)

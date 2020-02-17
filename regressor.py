@@ -37,6 +37,35 @@ class Regressor():
                                         subsample_for_bin=200000, subsample_freq=0,
                                         n_estimators=self.size, random_state=self.seed, verbosity=self.verbosity )
 
+        if kind == 'LGB_hypopt': # LightGBM with hypopt hyperparameter optimisation
+            from lightgbm import LGBMRegressor           
+            model = LGBMRegressor(  boosting_type='gbdt', class_weight=None, colsample_bytree=1.0,
+                                    importance_type='split', learning_rate=0.1, max_depth=-1,
+                                    min_child_samples=20, min_child_weight=0.001, min_split_gain=0.001,
+                                    n_jobs=-1, num_leaves=127, objective='mae',
+                                    reg_alpha=0.001, reg_lambda=0.0, silent=False,
+                                    subsample_for_bin=200000, subsample_freq=0,
+                                    n_estimators=self.size, random_state=self.seed, verbosity=2 )
+
+            from hypopt import GridSearch
+            self.grid = [
+                {
+                    'n_estimators': [ int(self.size / 2), int(self.size), int(self.size * 2) ],
+                    # 'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
+                    # 'num_leaves': [ 15, 31, 63, 127, 255 ],
+                    # 'max_depth': [ 10, 20, 30, 50, 75, 100, -1 ],
+                    # 'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
+                    # 'subsample_for_bin': [ 200000, 500000 ],
+                    # 'min_child_samples': [ 5, 10, 20, 30, 50 ],
+                    # 'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
+                    # 'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
+                    # 'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
+                    # 'reg_alpha': [ 1e-4, 1e-3, 1e-2, 1e-1 ],
+                    # 'reg_lambda': [ 1, 10, 100 ],
+                }
+            ]
+            self.model = GridSearch(model=model, param_grid = self.grid)
+
         elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
             self.model = GradientBoostingRegressor( loss="lad", min_samples_leaf=11, min_samples_split=8,
@@ -50,26 +79,13 @@ class Regressor():
             from sklearn.ensemble import ExtraTreesRegressor
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
-        elif kind == 'XGB': # parameters based on h2o automl results
+        elif kind == 'XGB':
             from xgboost import XGBRegressor
-            self.model = XGBRegressor(  n_estimators=105, max_depth=15, learning_rate=0.05,
+            self.model = XGBRegressor(  n_estimators=self.size, max_depth=15, learning_rate=0.05,
                                         min_child_weight=3, subsample=0.6,
                                         colsample_bylevel=0.6, colsample_bytree=0.9,
                                         reg_lambda=100, reg_alpha=0.01,
                                         random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
-
-        elif kind == 'TPOT':
-            from tpot import TPOTRegressor
-            self.model = TPOTRegressor(     generations=100, population_size=100, offspring_size=None,
-                                            mutation_rate=0.9, crossover_rate=0.1,
-                                            scoring='neg_mean_absolute_error', cv=4,
-                                            subsample=1.0, n_jobs=-1,
-                                            max_time_mins=None, max_eval_time_mins=360,
-                                            random_state=None, config_dict=None,
-                                            template=None, use_dask=False,
-                                            periodic_checkpoint_folder=f'{BASE_DIR}/tpot-pipelines',
-                                            early_stop=5, verbosity=2,
-                                            disable_update_check=True)
 
         else:
             print(f"Unrecognised regressor type '{kind}'")
