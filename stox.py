@@ -23,7 +23,6 @@ from zipfile import ZipFile
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
-from dataset import DataSet
 from regressor import Regressor
 from lib import market
 
@@ -45,6 +44,8 @@ parser.add_argument('--lookfwd', default=1, help='The number of periods into the
 parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
 parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
+parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
+parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
 
 SPLIT_DATE = parser.parse_args().split_date
 SIZE = int(parser.parse_args().size) # Trees
@@ -55,41 +56,55 @@ LOOKFWD = int(parser.parse_args().lookfwd)
 RESAMPLE = parser.parse_args().resample
 REGRESSOR = parser.parse_args().regressor
 DUMP = parser.parse_args().dump
+LOAD = parser.parse_args().load
+PREDICT = parser.parse_args().predict
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
 tickers = market.us_stocks() # if not MOCK else market.all_stocks() + ['_MOCK_EASY[AU]', '_MOCK_EASY[US]', '_MOCK_HARD[AU]', '_MOCK_HARD[US]']
 # tickers_au, tickers_us = market.au_stocks(), market.us_stocks()
 
-ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
+if LOAD:
+    from joblib import load
+    ds_train = load(f'{BASE_DIR}/ds_dump/ds_train.bin')
+    ds_test  = load(f'{BASE_DIR}/ds_dump/ds_test.bin')
+    print('Datasets loaded from last dump.')
+else:
+    from dataset import DataSet
+    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
+    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
+
 if VERBOSE > 0:
     print('\n--------------------------- Train dataset ---------------------------')
     print(ds_train.describe())
     print(ds_train.info(memory_usage='deep'))
 
-ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
 if VERBOSE > 0:
         print('\n--------------------------- Test dataset ----------------------------')
         print(ds_test.describe())
         print(ds_test.info(memory_usage='deep'))
 
 if DUMP:
-    ds_train.to_csv(f'{BASE_DIR}/output/ds_train.csv.gz')
-    ds_test.to_csv(f'{BASE_DIR}/output/ds_test.csv.gz')
+    from joblib import dump
+    dump(ds_train, f'{BASE_DIR}/ds_dump/ds_train.bin', compress=True)
+    dump(ds_test , f'{BASE_DIR}/ds_dump/ds_test.bin', compress=True)
+    print('Datasets dumped. Exiting.')
+    sys.exit(0)
 
 features = list(ds_train.columns)
 features.remove('future') # remove the target variable from features, duh
 
-predictors = None
-for t, td in ds_test.groupby(level=1):
-    if len(td) < MIN_TEST_SAMPLES:
-        continue # too few test samples to predict confidently
-    predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
-    predictor['ticker'] = t
-    if predictors is None:
-        predictors = predictor # init the dataframe
-    else:
-        predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
+if PREDICT:
+    predictors = None
+    for t, td in ds_test.groupby(level=1):
+        if len(td) < MIN_TEST_SAMPLES:
+            continue # too few test samples to predict confidently
+        predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
+        predictor['ticker'] = t
+        if predictors is None:
+            predictors = predictor # init the dataframe
+        else:
+            predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
 
 X_train = ds_train[features]
 y_train = ds_train['future']
@@ -118,44 +133,45 @@ if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
 if REGRESSOR.endswith('hypopt'):
     print('Optimised model:', model, sep='\n')
 
-predictors.set_index('ticker', inplace=True)
-predictors.sort_index(inplace=True)
+if PREDICT:
+    predictors.set_index('ticker', inplace=True)
+    predictors.sort_index(inplace=True)
 
-results = pd.DataFrame()
-for t, p in predictors.groupby(level=0):
-    if VERBOSE > 2:
-        print(p)
+    results = pd.DataFrame()
+    for t, p in predictors.groupby(level=0):
+        if VERBOSE > 2:
+            print(p)
 
-    predicted_at = p['date'].values[0]
-    predictor = p.drop('date', axis=1)
+        predicted_at = p['date'].values[0]
+        predictor = p.drop('date', axis=1)
 
-    if p.isnull().values.any():
-        if VERBOSE > 0:
-            print('Not predicting', t, 'as it has NaN in its predictor')
-            if VERBOSE > 2:
-                print(p)
-        continue
+        if p.isnull().values.any():
+            if VERBOSE > 0:
+                print('Not predicting', t, 'as it has NaN in its predictor')
+                if VERBOSE > 2:
+                    print(p)
+            continue
 
-    try:
-        xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
-    except KeyError:
-        continue
+        try:
+            xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
+        except KeyError:
+            continue
 
-    predictions = model.predict(xT)
-    results.at[t, 'predicted_at'] = predicted_at
-    results.at[t, 'prediction'] = model.predict(predictor)[0]
-    results.at[t, 'volatility'] = abs(yT).mean()
-    results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
-    results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
-    results.at[t, 'var_score'] = explained_variance_score(yT, predictions)
-    results.at[t, 'test_samples'] = xT.shape[0]
-    results.at[t, 'potential'] = results.loc[t, 'prediction'] * \
-                                (results.loc[t, 'var_score'] if results.loc[t, 'var_score'] > 0 else 0) * \
-                                (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
+        predictions = model.predict(xT)
+        results.at[t, 'predicted_at'] = predicted_at
+        results.at[t, 'prediction'] = model.predict(predictor)[0]
+        results.at[t, 'volatility'] = abs(yT).mean()
+        results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
+        results.at[t, 'alpha'] = (results.loc[t, 'volatility'] / results.loc[t, 'MAE'] - 1) * 100
+        results.at[t, 'var_score'] = explained_variance_score(yT, predictions)
+        results.at[t, 'test_samples'] = xT.shape[0]
+        results.at[t, 'potential'] = results.loc[t, 'prediction'] * \
+                                    (results.loc[t, 'var_score'] if results.loc[t, 'var_score'] > 0 else 0) * \
+                                    (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
 
-results = results.sort_values('potential', ascending=False).round(2)
-print(results, results.describe(), sep='\n')
-results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
+    results = results.sort_values('potential', ascending=False).round(2)
+    print(results, results.describe(), sep='\n')
+    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
 
 # print overall results
 overall_predictions = model.predict(X_test)

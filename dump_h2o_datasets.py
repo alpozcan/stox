@@ -30,7 +30,7 @@ if NO_SPLIT:
     print('\n--------------------------- Dataset ---------------------------')
     print(ds.describe())
     print(ds.info(memory_usage='deep'))
-    ds.to_csv(f'ds_dump/stox-dataset-whole-{LOOKBACK}-{LOOKFWD}-{RESAMPLE}.csv.xz', compression='xz')
+    ds.to_csv(f'ds_dump/stox-dataset-whole-{LOOKBACK}-{LOOKFWD}-{RESAMPLE}.csv.gz', compression='gzip')
 else:
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{VALIDATE_FROM}'", resample=RESAMPLE).data
     print('\n--------------------------- Train dataset ---------------------------')
