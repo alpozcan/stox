@@ -41,21 +41,20 @@ class Regressor():
                 from hypopt import GridSearch
                 param_grid = [
                     {
-                        'n_estimators': [ int(self.size / 2), self.size, (self.size * 2) ],
+                        'n_estimators': [ int(self.size / 2), self.size ],
                         'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
-                        'num_leaves': [ 15, 31, 63, 127, 255 ],
-                        'max_depth': [ 20, -1 ],
+                        'num_leaves': [ 31, 63, 127, 255 ],
                         'learning_rate': [ 0.01, 0.033, 0.066, 0.1 ],
                         'subsample_for_bin': [ 200000, 500000 ],
-                        'min_child_samples': [ 5, 10, 20, 30, 50 ],
+                        'min_child_samples': [ 5, 10, 20, 30 ],
                         'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
-                        'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
-                        'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
+                        'min_split_gain': [ 0.0, 1e-4, 1e-3 ],
+                        'colsample_bytree': [ 1.0, 0.8, 0.6 ],
                         'reg_alpha': [ 1e-3, 1e-2, 1e-1 ],
                         'reg_lambda': [ 1, 10, 100 ],
                     }
                 ]
-                self.model = GridSearch(model=self.model, param_grid=param_grid, parallelize=False, cv_folds=0, seed=self.seed)
+                self.model = GridSearch(model=self.model, param_grid=param_grid, parallelize=False, seed=self.seed)
 
         elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
