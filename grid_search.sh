@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-./stox.py --resample M --regressor LGB_hypopt --verbose 0
+time nice ./stox.py --resample M --regressor LGB_hypopt --verbose 0

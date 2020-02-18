@@ -45,7 +45,7 @@ class Regressor():
                         'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
                         'num_leaves': [ 15, 31, 63, 127, 255 ],
                         'max_depth': [ 20, -1 ],
-                        'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
+                        'learning_rate': [ 0.01, 0.033, 0.066, 0.1 ],
                         'subsample_for_bin': [ 200000, 500000 ],
                         'min_child_samples': [ 5, 10, 20, 30, 50 ],
                         'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
@@ -55,7 +55,7 @@ class Regressor():
                         'reg_lambda': [ 1, 10, 100 ],
                     }
                 ]
-                self.model = GridSearch(model=self.model, param_grid=param_grid)
+                self.model = GridSearch(model=self.model, param_grid=param_grid, parallelize=False, cv_folds=0, seed=self.seed)
 
         elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
