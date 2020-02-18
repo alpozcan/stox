@@ -131,7 +131,7 @@ if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
     print(fi.sort_values('importance', ascending=False))
 
 if REGRESSOR.endswith('hypopt'):
-    print('Optimised model:', model, sep='\n')
+    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
 
 if PREDICT:
     predictors.set_index('ticker', inplace=True)
