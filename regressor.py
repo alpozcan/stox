@@ -37,40 +37,40 @@ class Regressor():
                                         subsample_for_bin=200000, subsample_freq=0,
                                         n_estimators=self.size, random_state=self.seed, verbosity=self.verbosity )
 
-        if kind == 'LGB_hypopt': # LightGBM with hypopt hyperparameter optimisation
-            from hypopt import GridSearch
-            param_grid = [
-                {
-                    'n_estimators': [ int(self.size / 2), int(self.size), int(self.size * 2) ],
-                    'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
-                    'num_leaves': [ 15, 31, 63, 127, 255 ],
-                    'max_depth': [ 20, -1 ],
-                    'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
-                    'subsample_for_bin': [ 200000, 500000 ],
-                    'min_child_samples': [ 5, 10, 20, 30, 50 ],
-                    'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
-                    'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
-                    'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
-                    'reg_alpha': [ 1e-4, 1e-3, 1e-2, 1e-1 ],
-                    'reg_lambda': [ 1, 10, 100 ],
-                }
-            ]
-            self.model = GridSearch(model=self.model, param_grid=param_grid)
+            if kind == 'LGB_hypopt': # LightGBM with hypopt hyperparameter optimisation
+                from hypopt import GridSearch
+                param_grid = [
+                    {
+                        'n_estimators': [ int(self.size / 2), self.size, (self.size * 2) ],
+                        'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
+                        'num_leaves': [ 15, 31, 63, 127, 255 ],
+                        'max_depth': [ 20, -1 ],
+                        'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
+                        'subsample_for_bin': [ 200000, 500000 ],
+                        'min_child_samples': [ 5, 10, 20, 30, 50 ],
+                        'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
+                        'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
+                        'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
+                        'reg_alpha': [ 1e-3, 1e-2, 1e-1 ],
+                        'reg_lambda': [ 1, 10, 100 ],
+                    }
+                ]
+                self.model = GridSearch(model=self.model, param_grid=param_grid)
 
-        if kind == 'GBR':
+        elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
             self.model = GradientBoostingRegressor( loss="lad", min_samples_leaf=11, min_samples_split=8,
                                                     n_estimators=self.size, random_state=self.seed, verbose=self.verbosity )
 
-        if kind == 'RFR':
+        elif kind == 'RFR':
             from sklearn.ensemble import RandomForestRegressor
             self.model = RandomForestRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
-        if kind == 'ETR':
+        elif kind == 'ETR':
             from sklearn.ensemble import ExtraTreesRegressor
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
-        if kind == 'XGB':
+        elif kind == 'XGB':
             from xgboost import XGBRegressor
             self.model = XGBRegressor(  n_estimators=self.size, max_depth=15, learning_rate=0.05,
                                         min_child_weight=3, subsample=0.6,
