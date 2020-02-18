@@ -4,7 +4,7 @@ data/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
 
-ds_dump/*.csv
+ds_dump/*.csv*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -33,7 +33,7 @@ MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be consider
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True):
+    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, regressor=''):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
@@ -42,6 +42,7 @@ class DataSet:
         self.resample = resample
         self.ta = ta
         self.patterns = patterns
+        self.regressor = regressor
 
         self.d_index, self.index_features = {}, {}
         self.d_index['US'] = self.get_index_data('GSPC')
@@ -221,11 +222,12 @@ class DataSet:
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
 
         # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
-        cardinalities = ds.apply(pd.Series.nunique)
-        categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
-        categorical_type_dict = { c: 'category' for c in categoricals }
+        if self.regressor != 'XGB': # XG Boost doesn't support the category type
+            cardinalities = ds.apply(pd.Series.nunique)
+            categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
+            categorical_type_dict = { c: 'category' for c in categoricals }
+            ds = ds.astype(categorical_type_dict, copy=False)
 
-        ds = ds.astype(categorical_type_dict, copy=False)
         ds.set_index('ticker', append=True, inplace=True)
         ds.sort_index(inplace=True)
 
