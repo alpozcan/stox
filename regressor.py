@@ -27,7 +27,7 @@ class Regressor():
     def __init__(self, kind, size, seed, verbosity):
         self.kind, self.size, self.seed, self.verbosity = kind, size, seed, verbosity
 
-        if kind == 'LGB':
+        if kind.startswith('LGB'):
             from lightgbm import LGBMRegressor
             self.model = LGBMRegressor( boosting_type='gbdt', class_weight=None, colsample_bytree=1.0,
                                         importance_type='split', learning_rate=0.1, max_depth=-1,
@@ -38,48 +38,39 @@ class Regressor():
                                         n_estimators=self.size, random_state=self.seed, verbosity=self.verbosity )
 
         if kind == 'LGB_hypopt': # LightGBM with hypopt hyperparameter optimisation
-            from lightgbm import LGBMRegressor           
-            model = LGBMRegressor(  boosting_type='gbdt', class_weight=None, colsample_bytree=1.0,
-                                    importance_type='split', learning_rate=0.1, max_depth=-1,
-                                    min_child_samples=20, min_child_weight=0.001, min_split_gain=0.001,
-                                    n_jobs=-1, num_leaves=127, objective='mae',
-                                    reg_alpha=0.001, reg_lambda=0.0, silent=False,
-                                    subsample_for_bin=200000, subsample_freq=0,
-                                    n_estimators=self.size, random_state=self.seed, verbosity=2 )
-
             from hypopt import GridSearch
-            self.grid = [
+            param_grid = [
                 {
                     'n_estimators': [ int(self.size / 2), int(self.size), int(self.size * 2) ],
-                    # 'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
-                    # 'num_leaves': [ 15, 31, 63, 127, 255 ],
-                    # 'max_depth': [ 10, 20, 30, 50, 75, 100, -1 ],
-                    # 'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
-                    # 'subsample_for_bin': [ 200000, 500000 ],
-                    # 'min_child_samples': [ 5, 10, 20, 30, 50 ],
-                    # 'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
-                    # 'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
-                    # 'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
-                    # 'reg_alpha': [ 1e-4, 1e-3, 1e-2, 1e-1 ],
-                    # 'reg_lambda': [ 1, 10, 100 ],
+                    'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
+                    'num_leaves': [ 15, 31, 63, 127, 255 ],
+                    'max_depth': [ 20, -1 ],
+                    'learning_rate': [ 0.01, 0.025, 0.05, 0.1 ],
+                    'subsample_for_bin': [ 200000, 500000 ],
+                    'min_child_samples': [ 5, 10, 20, 30, 50 ],
+                    'min_child_weight': [ 1e-4, 1e-3, 1e-2 ],
+                    'min_split_gain': [ 0.0, 1e-4, 1e-3, 1e-2 ],
+                    'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 ],
+                    'reg_alpha': [ 1e-4, 1e-3, 1e-2, 1e-1 ],
+                    'reg_lambda': [ 1, 10, 100 ],
                 }
             ]
-            self.model = GridSearch(model=model, param_grid = self.grid)
+            self.model = GridSearch(model=self.model, param_grid=param_grid)
 
-        elif kind == 'GBR':
+        if kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
             self.model = GradientBoostingRegressor( loss="lad", min_samples_leaf=11, min_samples_split=8,
                                                     n_estimators=self.size, random_state=self.seed, verbose=self.verbosity )
 
-        elif kind == 'RFR':
+        if kind == 'RFR':
             from sklearn.ensemble import RandomForestRegressor
             self.model = RandomForestRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
-        elif kind == 'ETR':
+        if kind == 'ETR':
             from sklearn.ensemble import ExtraTreesRegressor
             self.model = ExtraTreesRegressor(n_estimators=self.size, random_state=self.seed, verbose=self.verbosity, n_jobs=-1)
 
-        elif kind == 'XGB':
+        if kind == 'XGB':
             from xgboost import XGBRegressor
             self.model = XGBRegressor(  n_estimators=self.size, max_depth=15, learning_rate=0.05,
                                         min_child_weight=3, subsample=0.6,
