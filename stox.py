@@ -122,7 +122,7 @@ time_start_tr = perf_counter()
 if not REGRESSOR.endswith('hypopt'):
     model.fit(X_train, y_train)
 else:
-    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error')
+    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
 
 print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
