@@ -54,8 +54,7 @@ class Regressor():
                         'reg_lambda': [ 1, 10, 100 ],
                     }
                 ]
-
-                self.model = GridSearch(model=self.model, param_grid=param_grid, num_threads=1, seed=self.seed)
+                self.model = GridSearch(model=self.model, param_grid=param_grid, parallelize=False, seed=self.seed)
 
         elif kind == 'GBR':
             from sklearn.ensemble import GradientBoostingRegressor
