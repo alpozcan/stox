@@ -168,7 +168,7 @@ class DataSet:
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
-            (d_ticker['volume'] / d_ticker['volume'].mean() * d_ticker['price'], 'volume'),
+            (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume'),
 
             (self.d_index[country]['pc'], 'ipc'),
             (d_ticker['pc'] - self.d_index[country]['pc'], 'spc_minus_ipc'),
@@ -220,9 +220,11 @@ class DataSet:
         """ Multiprocessing wrapper for quickly reading data for multiple tickers """
         pool = multiprocessing.Pool(multiprocessing.cpu_count())
         ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
+        pool.close()
+        pool.join()
 
         # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
-        if self.regressor != 'XGB': # XG Boost doesn't support the category type
+        if self.regressor != 'XGB': # XGBoost doesn't support the category type
             cardinalities = ds.apply(pd.Series.nunique)
             categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
             categorical_type_dict = { c: 'category' for c in categoricals }
