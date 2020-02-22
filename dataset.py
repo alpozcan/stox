@@ -168,7 +168,7 @@ class DataSet:
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
-            (d_ticker['volume'] / d_ticker['volume'].mean(), 'volume'),
+            ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'volume'),
 
             (self.d_index[country]['pc'], 'ipc'),
             (d_ticker['pc'] - self.d_index[country]['pc'], 'spc_minus_ipc'),
