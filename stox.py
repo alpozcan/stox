@@ -46,7 +46,7 @@ parser.add_argument('--regressor', default='LGB', help='String alias for the reg
 parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
-parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV. Default: False', action='store_true')
+parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
 
 SPLIT_DATE = parser.parse_args().split_date
 SIZE = int(parser.parse_args().size) # Trees
@@ -183,8 +183,8 @@ error_on_test = round(mean_absolute_error(y_test, predictions_on_test), 4)
 print('Overall volatility:', volatility_on_test, ', error:', error_on_test, ', alpha:', round((volatility_on_test / error_on_test - 1) * 100, 2))
 
 if SAVE_PREDICTIONS:
-    predictions_output_file = f'{BASE_DIR}/predictions_on_test/predictions.csv'
     y_test = pd.concat([y_test, pd.DataFrame(predictions_on_test, index=y_test.index)], axis=1)
     y_test.columns = [*y_test.columns[:-1], 'prediction']
-    y_test.to_csv(predictions_output_file)
+    predictions_output_file = f'{BASE_DIR}/predictions_on_test/predictions.csv.xz'
+    y_test.to_csv(predictions_output_file, compression='xz')
     print('Saved predictions on test data to', predictions_output_file)
