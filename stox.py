@@ -132,6 +132,7 @@ if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
 
 if REGRESSOR.endswith('hypopt'):
     print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
+    print('BEST MODEL:', model.best_estimator_, sep='\n')
 
 if PREDICT:
     predictors.set_index('ticker', inplace=True)

@@ -29,8 +29,8 @@ class Regressor():
 
         if kind.startswith('LGB'):
             from lightgbm import LGBMRegressor
-            self.model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.8, 
-                                        min_child_samples=20, min_child_weight=0.01, min_split_gain=0.01,
+            self.model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.8,
+                                        min_child_samples=20, min_child_weight=0.01,
                                         n_estimators=self.size, num_leaves=63, learning_rate=0.1,
                                         reg_alpha=0.001, reg_lambda=1, objective='mae',
                                         random_state=self.seed, verbosity=self.verbosity, n_jobs=-1 )
@@ -38,8 +38,8 @@ class Regressor():
             if kind == 'LGB_hypopt': # LightGBM with hypopt hyperparameter optimisation
                 from hypopt import GridSearch
                 param_grid = [{
-                        # 'n_estimators': [ self.size ],
-                        # 'objective': [ 'mae' ],
+                        'n_estimators': [ self.size ],
+                        'objective': [ 'mae' ],
                         # 'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
                         # 'num_leaves': [ 31, 63, 127 ],
                         # 'learning_rate': [ 0.05, 0.1, 0.15 ],
@@ -47,7 +47,7 @@ class Regressor():
                         # 'min_child_samples': [ 10, 20, 30 ],
                         # 'min_child_weight': [ 0.001, 0.01, 0.1 ],
                         # 'min_split_gain': [ 0.0, 0.001, 0.01 ],
-                        # 'colsample_bytree': [ 1.0, 0.8, 0.6 ],
+                        'colsample_bytree': [ 1.0, 0.8, 0.6 ],
                         # 'reg_alpha': [ 0.001, 0.01, 0.1 ],
                         # 'reg_lambda': [ 0.01, 0.1, 1],
                         'verbosity': [ 0 ],
