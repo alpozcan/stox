@@ -200,7 +200,7 @@ class DataSet:
                 d = pd.concat([d, d[c].shift(i).rename(f'past_{c}_{i}')], axis=1)
 
         predictor = d.tail(1).copy()
-        future = d['spc'].shift(self.lookfwd * -1)
+        future = (d['price'].shift(self.lookfwd * -1) / d['price'] - 1) * 100
 
         d = pd.concat([d, future.rename('future')], axis=1)
         d = pd.concat([d, predictor], axis=0, sort=False)
