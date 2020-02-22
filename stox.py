@@ -46,6 +46,7 @@ parser.add_argument('--regressor', default='LGB', help='String alias for the reg
 parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
+parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV. Default: False', action='store_true')
 
 SPLIT_DATE = parser.parse_args().split_date
 SIZE = int(parser.parse_args().size) # Trees
@@ -58,6 +59,7 @@ REGRESSOR = parser.parse_args().regressor
 DUMP = parser.parse_args().dump
 LOAD = parser.parse_args().load
 PREDICT = parser.parse_args().predict
+SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
@@ -174,8 +176,15 @@ if PREDICT:
     print(results, results.describe(), sep='\n')
     results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
 
-# print overall results
-overall_predictions = model.predict(X_test)
-overall_volatility = round(abs(y_test).mean(), 4)
-overall_error = round(mean_absolute_error(y_test, overall_predictions), 4)
-print('Overall volatility:', overall_volatility, ', error:', overall_error, ', alpha:', round((overall_volatility / overall_error - 1) * 100, 2))
+# Calculate and print prediction results on the test data
+predictions_on_test = model.predict(X_test)
+volatility_on_test = round(abs(y_test).mean(), 4)
+error_on_test = round(mean_absolute_error(y_test, predictions_on_test), 4)
+print('Overall volatility:', volatility_on_test, ', error:', error_on_test, ', alpha:', round((volatility_on_test / error_on_test - 1) * 100, 2))
+
+if SAVE_PREDICTIONS:
+    predictions_output_file = f'{BASE_DIR}/predictions_on_test/predictions.csv'
+    y_test = pd.concat([y_test, pd.DataFrame(predictions_on_test, index=y_test.index)], axis=1)
+    y_test.columns = [*y_test.columns[:-1], 'prediction']
+    y_test.to_csv(predictions_output_file)
+    print('Saved predictions on test data to', predictions_output_file)

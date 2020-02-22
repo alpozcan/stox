@@ -3,6 +3,7 @@ ds_dump/
 logs/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
+# predictions_on_test/*.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
