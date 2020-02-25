@@ -4,6 +4,7 @@ logs/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
 predictions_on_test/*
+predictors/*.csv.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

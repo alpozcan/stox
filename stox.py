@@ -41,7 +41,7 @@ parser.add_argument('--seed', default=6, help='Seed for initialising the model w
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
 parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
-parser.add_argument('--resample', default=f'W-{day_of_week}', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is weekly resampling on the current workday")
+parser.add_argument('--resample', default='M', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is monthly resampling.")
 parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
 parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
@@ -74,7 +74,7 @@ if LOAD:
 else:
     from dataset import DataSet
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
-    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
+    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR, write_predictors=True).data
 
 if VERBOSE > 0:
     print('\n--------------------------- Train dataset ---------------------------')

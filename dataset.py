@@ -33,7 +33,7 @@ MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be consider
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, regressor=''):
+    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, regressor='', write_predictors=False):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
@@ -43,6 +43,7 @@ class DataSet:
         self.ta = ta
         self.patterns = patterns
         self.regressor = regressor
+        self.write_predictors = write_predictors
 
         self.d_index, self.index_features = {}, {}
         self.d_index['US'] = self.get_index_data('GSPC')
@@ -105,6 +106,8 @@ class DataSet:
             d.dropna(inplace=True)
 
         # calculate nominal price and deltas
+        d.open[d.open == 0] = np.nan #      safety net in case there are
+        d.close[d.close == 0] = np.nan #    zeroes in these important fields
         d['price'] = (d['open'] + d['close']) / 2
         d['pc'] = (d['price'].pct_change() * 100)
         d.dropna(inplace=True)
@@ -199,11 +202,16 @@ class DataSet:
             for i in range(2, (self.lookback + 1)):
                 d = pd.concat([d, d[c].shift(i).rename(f'past_{c}_{i}')], axis=1)
 
-        predictor = d.tail(1).copy()
+        if self.write_predictors:
+            predictor = d[d.spc.notnull()].tail(1).copy()
+            predictor.drop(['price', 'open', 'close'], axis=1, inplace=True)
+            predictor.to_csv(f'{BASE_DIR}/predictors/{ticker}.csv.gz', compression='gzip')
+
+        # calculate and insert the target variable column
         future = (d['price'].shift(self.lookfwd * -1) / d['price'] - 1) * 100
 
         d = pd.concat([d, future.rename('future')], axis=1)
-        d = pd.concat([d, predictor], axis=0, sort=False)
+        # d = pd.concat([d, predictor], axis=0, sort=False)
 
         # debug
         # if ticker == 'GE_US' or ticker == 'ANZ_AU':
