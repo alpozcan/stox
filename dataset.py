@@ -59,7 +59,7 @@ class DataSet:
                                                         WHERE {self.predicate} 
                                                         ORDER BY date ASC
                                                         """,
-                                                        f'sqlite:////var/stox/stox.db',
+                                                        f'sqlite:///{BASE_DIR}/db/stox.db',
                                                         index_col=['date']))
 
     def preprocess_ts(self, d):
@@ -158,7 +158,7 @@ class DataSet:
                                                             WHERE {self.predicate}  
                                                             ORDER BY date ASC
                                                             """,
-                                                            f'sqlite:////var/stox/stox.db',
+                                                            f'sqlite:///{BASE_DIR}/db/stox.db',
                                                             index_col=['date']))
 
         if len(d_ticker) <= self.lookback:
