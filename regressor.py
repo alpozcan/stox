@@ -40,8 +40,8 @@ class Regressor():
                 param_grid = [{
                         'n_estimators': [ self.size ],
                         'objective': [ 'mae' ],
-                        # 'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
-                        # 'num_leaves': [ 31, 63, 127 ],
+                        'boosting_type': [ 'gbdt', 'dart', 'goss', 'rf' ],
+                        'num_leaves': [ 31, 63, 127 ],
                         # 'learning_rate': [ 0.05, 0.1, 0.15 ],
                         # 'subsample_for_bin': [ 200000, 500000 ],
                         # 'min_child_samples': [ 10, 20, 30 ],

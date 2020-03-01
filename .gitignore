@@ -7,6 +7,9 @@ results/*.csv
 predictions_on_test/*
 predictors/*.csv.gz
 
+# Code editor files
+*.kate-swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
