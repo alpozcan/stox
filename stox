@@ -23,7 +23,7 @@ from zipfile import ZipFile
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
-from regressor import Regressor
+from lightgbm import LGBMRegressor
 from lib import market
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -42,7 +42,7 @@ parser.add_argument('--verbose', default=1, help='Integer greater than zero. Gre
 parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
 parser.add_argument('--resample', default='M', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is monthly resampling.")
-parser.add_argument('--regressor', default='LGB', help='String alias for the regressor model to use, as defined in regressor.py. Default: LGB')
+parser.add_argument('--grid-search', default=False, help='Enable grid search of hyperparameters. Default: disabled', action='store_true')
 parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
@@ -55,7 +55,7 @@ VERBOSE = int(parser.parse_args().verbose)
 LOOKBACK = int(parser.parse_args().lookback)
 LOOKFWD = int(parser.parse_args().lookfwd)
 RESAMPLE = parser.parse_args().resample
-REGRESSOR = parser.parse_args().regressor
+GRID_SEARCH = parser.parse_args().grid_search
 DUMP = parser.parse_args().dump
 LOAD = parser.parse_args().load
 PREDICT = parser.parse_args().predict
@@ -73,8 +73,8 @@ if LOAD:
     print('Datasets loaded from last dump.')
 else:
     from dataset import DataSet
-    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR).data
-    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, regressor=REGRESSOR, write_predictors=True).data
+    ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
+    ds_test = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, write_predictors=True).data
 
 if VERBOSE > 0:
     print('\n--------------------------- Train dataset ---------------------------')
@@ -90,23 +90,10 @@ if DUMP:
     from joblib import dump
     dump(ds_train, f'{BASE_DIR}/ds_dump/ds_train.bin', compress=True)
     dump(ds_test , f'{BASE_DIR}/ds_dump/ds_test.bin', compress=True)
-    print('Datasets dumped. Exiting.')
-    sys.exit(0)
+    print('Datasets dumped.')
 
 features = list(ds_train.columns)
 features.remove('future') # remove the target variable from features, duh
-
-if PREDICT:
-    predictors = None
-    for t, td in ds_test.groupby(level=1):
-        if len(td) < MIN_TEST_SAMPLES:
-            continue # too few test samples to predict confidently
-        predictor = td.xs(t, level=1).tail(1).drop(['future'], axis=1).reset_index()
-        predictor['ticker'] = t
-        if predictors is None:
-            predictors = predictor # init the dataframe
-        else:
-            predictors = pd.concat([predictors, predictor], axis=0, ignore_index=True)
 
 X_train = ds_train[features]
 y_train = ds_train['future']
@@ -117,24 +104,49 @@ y_test = ds_test['future']
 print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
             'y_train:', y_train.shape, 'y_test:', y_test.shape )
 
-model = Regressor(kind=REGRESSOR, size=SIZE, seed=SEED, verbosity=VERBOSE).model
+categorical_columns = [ c for c in X_train.columns if 'CDL' in c ]
+
+model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.6,
+                       min_child_samples=20, min_child_weight=0.001,
+                       n_estimators=SIZE, num_leaves=63, learning_rate=0.1,
+                       reg_alpha=0.001, reg_lambda=1, objective='mae',
+                       random_state=SEED, verbosity=VERBOSE, n_jobs=4,
+                       #categorical_column='name:' + ','.join(categorical_columns)
+                     )
+
+if GRID_SEARCH:
+    from hypopt import GridSearch
+    param_grid = [{
+        #'n_estimators': [ SIZE ],
+        #'objective': [ 'mae' ],
+        #'boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
+        #'num_leaves': [ 31, 63, 127 ],
+        # 'learning_rate': [ 0.05, 0.1, 0.15 ],
+        # 'subsample_for_bin': [ 200000, 500000 ],
+        #'min_child_samples': [ 15, 20, 25 ],
+        #'min_child_weight': [ 0.001, 0.01, 0.1 ],
+        #'min_split_gain': [ 0.0, 0.001, 0.01 ],
+        'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
+        #'reg_alpha': [ 0.001, 0.01, 0.1 ],
+        #'reg_lambda': [ 0.01, 0.1, 1],
+        'verbosity': [ 0 ],
+    }]
+    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
 
 time_start_tr = perf_counter()
 
-if not REGRESSOR.endswith('hypopt'):
+if not GRID_SEARCH:
     model.fit(X_train, y_train)
 else:
-    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error')
+    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
+    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
+    print('BEST MODEL:', model.best_estimator_, sep='\n')
 
 print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 
 if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
     print(fi.sort_values('importance', ascending=False))
-
-if REGRESSOR.endswith('hypopt'):
-    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
-    print('BEST MODEL:', model.best_estimator_, sep='\n')
 
 if PREDICT:
     predictors.set_index('ticker', inplace=True)
