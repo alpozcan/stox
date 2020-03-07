@@ -33,7 +33,7 @@ MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be consider
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, write_predictors=False):
+    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, keep_predictors=False):
         self.tickers = tickers
         self.lookback = lookback
         self.lookfwd = lookfwd
@@ -42,7 +42,7 @@ class DataSet:
         self.resample = resample
         self.ta = ta
         self.patterns = patterns
-        self.write_predictors = write_predictors
+        self.keep_predictors = keep_predictors
 
         self.d_index, self.index_features = {}, {}
         self.d_index['US'] = self.get_index_data('GSPC')
@@ -114,6 +114,7 @@ class DataSet:
         return d
 
     def generate_ta_features(self, data, prefix=''):
+        prefix = 'f_' + prefix
         features = []
         for i in range(2, (self.lookback + 1)):
             features.extend([
@@ -166,14 +167,14 @@ class DataSet:
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
-            (d_ticker['pc'], 'spc'),
+            (d_ticker['pc'], 'f_spc'),
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
-            ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'volume'),
+            ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'f_volume'),
 
-            (self.d_index[country]['pc'], 'ipc'),
-            (d_ticker['pc'] - self.d_index[country]['pc'], 'spc_minus_ipc'),
+            (self.d_index[country]['pc'], 'f_ipc'),
+            (d_ticker['pc'] - self.d_index[country]['pc'], 'f_spc_minus_ipc'),
             # (self.d_index[country]['volume'] / self.d_index[country]['volume'].mean(), 'ivolume')
             ]
 
@@ -193,18 +194,16 @@ class DataSet:
         d.columns = [d[1] for d in (features + self.index_features[country])]
 
         # Filter out outliers
-        d.spc.drop(d.spc[d.spc > HIGH_OUTLIER].index, inplace=True)
-        d.spc.drop(d.spc[d.spc < LOW_OUTLIER].index, inplace=True)
+        d.f_spc.drop(d.f_spc[d.f_spc > HIGH_OUTLIER].index, inplace=True)
+        d.f_spc.drop(d.f_spc[d.f_spc < LOW_OUTLIER].index, inplace=True)
 
         # past values in a rolling window
-        for c in ['spc', 'ipc', 'spc_minus_ipc', 'volume']:
+        for c in ['f_spc', 'f_ipc', 'f_spc_minus_ipc', 'f_volume']:
             for i in range(2, (self.lookback + 1)):
-                d = pd.concat([d, d[c].shift(i).rename(f'past_{c}_{i}')], axis=1)
+                d = pd.concat([d, d[c].shift(i).rename(f'f_past_{c[2:]}_{i}')], axis=1)
 
-        if self.write_predictors:
-            predictor = d[d.spc.notnull()].tail(1).copy()
-            predictor.drop(['price', 'open', 'close'], axis=1, inplace=True)
-            predictor.to_csv(f'{BASE_DIR}/predictors/{ticker}.csv.gz', compression='gzip')
+        
+        predictor = d[d.f_spc.notnull()].tail(1).copy()
 
         # calculate and insert the target variable column
         future = (d['price'].shift(self.lookfwd * -1) / d['price'] - 1) * 100
@@ -216,10 +215,11 @@ class DataSet:
         # if ticker == 'GE_US' or ticker == 'ANZ_AU':
         #     d.to_csv(f'{BASE_DIR}/debug/{ticker}.csv')
 
-        d.drop(['price', 'open', 'close'], axis=1, inplace=True)
-        d.volume[d.volume == 0] = np.nan # Get rid of zero-volume samples
+        d.f_volume[d.f_volume == 0] = np.nan # Get rid of zero-volume samples
         # d.future[d.future == 0] = np.nan # Also where the target is zero
         d.dropna(inplace=True)
+        if self.keep_predictors:
+            d = pd.concat([d, predictor], axis=0, sort=False)
 
         return d
 
@@ -230,13 +230,12 @@ class DataSet:
         pool.close()
         pool.join()
 
+        ds.set_index('ticker', append=True, inplace=True)
+        ds.sort_index(inplace=True)
+
         # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
         cardinalities = ds.apply(pd.Series.nunique)
         categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
         categorical_type_dict = { c: 'category' for c in categoricals }
-        ds = ds.astype(categorical_type_dict, copy=False)
 
-        ds.set_index('ticker', append=True, inplace=True)
-        ds.sort_index(inplace=True)
-
-        self.data = ds
+        self.data = ds.astype(categorical_type_dict, copy=False)

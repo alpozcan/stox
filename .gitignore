@@ -1,11 +1,9 @@
 db/
 data/
-ds_dump/
+datasets/
 logs/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
-predictions_on_test/*
-predictors/*.csv.gz
 
 # Code editor files
 *.kate-swp
