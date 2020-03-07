@@ -165,7 +165,7 @@ if PREDICT:
             continue
 
         predictions = model.predict(xT)
-        results.at[t, 'predicted_at'] = p.index.values[0][0].date()
+        results.at[t, 'predicted_at'] = p.index[0][0]
         results.at[t, 'prediction'] = model.predict(p)[0]
         results.at[t, 'volatility'] = abs(yT).mean()
         results.at[t, 'MAE'] = mean_absolute_error(yT, predictions)
@@ -178,7 +178,7 @@ if PREDICT:
 
     results = results.sort_values('potential', ascending=False).round(2)
     print(results, results.describe(), sep='\n')
-    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
+    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv', index_label='ticker')
 
 # Calculate and print prediction results on the test data
 predictions_on_test = model.predict(X_test)

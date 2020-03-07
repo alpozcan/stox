@@ -4,6 +4,7 @@ datasets/
 logs/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
+output/*
 
 # Code editor files
 *.kate-swp
