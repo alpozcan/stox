@@ -19,6 +19,7 @@
 
 import pandas as pd
 import os, glob
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../'
 
@@ -26,12 +27,14 @@ def read_results(silent=False):
     result_files = glob.glob(f'{BASE_DIR}results/*.csv')
     latest_result_file = max(result_files, key=os.path.getctime)
     if not silent:
-        print('reading results from', latest_result_file)
+        print('results from', latest_result_file.split('/')[-1])
     return pd.read_csv( latest_result_file,
                         index_col=[0], parse_dates=['predicted_at'] )
 
 def read_predictions():
-    return pd.read_csv( f'{BASE_DIR}/output/predictions_on_test.csv.xz',
+    predictions_file = f'{BASE_DIR}/output/predictions_on_test.csv.xz'
+    print('predictions:', datetime.fromtimestamp(os.path.getmtime(predictions_file)))
+    return pd.read_csv( predictions_file,
                         index_col=[0, 1], parse_dates=['date'] )
 
 def read_all_predictions():
