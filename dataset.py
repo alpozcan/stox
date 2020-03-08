@@ -25,6 +25,7 @@ import multiprocessing, os
 from lib import market
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+DATABASE = f'sqlite:///{BASE_DIR}/db/stox-us-1963-2017-dividend-adjusted.db'
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
@@ -57,7 +58,7 @@ class DataSet:
                                                         WHERE {self.predicate} 
                                                         ORDER BY date ASC
                                                         """,
-                                                        f'sqlite:///{BASE_DIR}/db/stox.db',
+                                                        DATABASE,
                                                         index_col=['date']))
 
     def preprocess_ts(self, d):
@@ -157,7 +158,7 @@ class DataSet:
                                                             WHERE {self.predicate}  
                                                             ORDER BY date ASC
                                                             """,
-                                                            f'sqlite:///{BASE_DIR}/db/stox.db',
+                                                            DATABASE,
                                                             index_col=['date']))
 
         if len(d_ticker) <= self.lookback:
@@ -233,8 +234,9 @@ class DataSet:
         ds.sort_index(inplace=True)
 
         # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
-        cardinalities = ds.apply(pd.Series.nunique)
-        categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
+        #cardinalities = ds.apply(pd.Series.nunique)
+        #categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
+        categoricals = [c for c in ds.columns if c.startswith('f_') and 'CDL' in c]
         categorical_type_dict = { c: 'category' for c in categoricals }
 
         self.data = ds.astype(categorical_type_dict, copy=False)

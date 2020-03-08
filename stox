@@ -35,7 +35,7 @@ day_of_week = 'FRI' if day_of_week in ['SAT', 'SUN'] else day_of_week
 timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--split-date', default='2014-01-01', help='train/test split date. Default : 2015-01-01')
+parser.add_argument('--split-date', default='2014-01-01', help='train/test split date. Default : 2014-01-01')
 parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
@@ -153,7 +153,7 @@ if PREDICT:
     results = pd.DataFrame()
     for t, p in predictors.groupby(level=1):
         if p.isnull().values.any():
-            if VERBOSE > 0:
+            if VERBOSE > 1:
                 print('Not predicting', t, 'as it has NaN in its predictor')
                 if VERBOSE > 2:
                     print(p)
