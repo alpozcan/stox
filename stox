@@ -63,7 +63,7 @@ SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 
-tickers = market.au_stocks()
+tickers = market.us_stocks()
 
 if LOAD:
     from joblib import load
@@ -127,7 +127,7 @@ if GRID_SEARCH:
         #'min_child_samples': [ 15, 20, 25 ],
         #'min_child_weight': [ 0.001, 0.01, 0.1 ],
         #'min_split_gain': [ 0.0, 0.001, 0.01 ],
-        'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
+        #'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
         #'reg_alpha': [ 0.001, 0.01, 0.1 ],
         #'reg_lambda': [ 0.01, 0.1, 1],
         'verbosity': [ 0 ],
