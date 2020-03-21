@@ -233,10 +233,10 @@ class DataSet:
         ds.set_index('ticker', append=True, inplace=True)
         ds.sort_index(inplace=True)
 
-        # convert to categorical types on applicable columns (those with fewer than MIN_NUMERICAL_CARDINALITY cardinality)
         #cardinalities = ds.apply(pd.Series.nunique)
         #categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
-        categoricals = [c for c in ds.columns if c.startswith('f_') and 'CDL' in c]
-        categorical_type_dict = { c: 'category' for c in categoricals }
 
-        self.data = ds.astype(categorical_type_dict, copy=False)
+        # categoricals = [c for c in ds.columns if c.startswith('f_') and 'CDL' in c]
+        # categorical_type_dict = { c: 'category' for c in categoricals }
+
+        self.data = ds #.astype(categorical_type_dict, copy=False)
