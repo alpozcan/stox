@@ -25,7 +25,7 @@ import multiprocessing, os
 from lib import market
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-DATABASE = f'sqlite:///{BASE_DIR}/db/stox-us-1963-2017-dividend-adjusted.db'
+DATABASE = f'sqlite:///{BASE_DIR}/db/stox.db'
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage

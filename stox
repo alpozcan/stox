@@ -25,6 +25,7 @@ from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from lightgbm import LGBMRegressor
 from lib import market
+from joblib import dump, load
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
@@ -43,8 +44,10 @@ parser.add_argument('--lookback', default=6, help='The number of periods for loo
 parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
 parser.add_argument('--resample', default='M', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is monthly resampling.")
 parser.add_argument('--grid-search', default=False, help='Enable grid search of hyperparameters. Default: disabled', action='store_true')
-parser.add_argument('--dump', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
-parser.add_argument('--load', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
+parser.add_argument('--dump-data', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
+parser.add_argument('--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
+parser.add_argument('--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
+parser.add_argument('--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
 parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
 
@@ -56,20 +59,20 @@ LOOKBACK = int(parser.parse_args().lookback)
 LOOKFWD = int(parser.parse_args().lookfwd)
 RESAMPLE = parser.parse_args().resample
 GRID_SEARCH = parser.parse_args().grid_search
-DUMP = parser.parse_args().dump
-LOAD = parser.parse_args().load
+DUMP_DATA = parser.parse_args().dump_data
+LOAD_DATA = parser.parse_args().load_data
+SAVE_MODEL = parser.parse_args().save_model
+LOAD_MODEL = parser.parse_args().load_model
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
-
+STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
 tickers = market.us_stocks()
 
-if LOAD:
-    from joblib import load
-    ds_train = load(f'{BASE_DIR}/datasets/ds_train.bin')
-    ds_test  = load(f'{BASE_DIR}/datasets/ds_test.bin')
-    print('Datasets loaded from last dump.')
+if LOAD_DATA:
+    ds_train = load(f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin')
+    ds_test  = load(f'{BASE_DIR}/datasets/ds_test_{STAMP}.bin')
 else:
     from dataset import DataSet
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
@@ -83,11 +86,9 @@ if VERBOSE > 0:
     print(ds_test.describe())
     print(ds_test.info(memory_usage='deep'))
 
-if DUMP:
-    from joblib import dump
-    dump(ds_train, f'{BASE_DIR}/datasets/ds_train.bin', compress=True)
-    dump(ds_test , f'{BASE_DIR}/datasets/ds_test.bin', compress=True)
-    print('Datasets dumped.')
+if DUMP_DATA:
+    dump(ds_train, f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin', compress=True)
+    dump(ds_test , f'{BASE_DIR}/datasets/ds_test_{STAMP}.bin', compress=True)
 
 features = [ f for f in list(ds_train.columns) if f.startswith('f_') ]
 
@@ -107,43 +108,48 @@ print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
 
 categorical_columns = [ c for c in X_train.columns if 'CDL' in c ]
 
-model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.6,
-                       min_child_samples=20, min_child_weight=0.001,
-                       n_estimators=SIZE, num_leaves=63, learning_rate=0.1,
-                       reg_alpha=0.001, reg_lambda=1, objective='mae',
-                       random_state=SEED, verbosity=VERBOSE, n_jobs=4,
-                       #categorical_column='name:' + ','.join(categorical_columns)
-                     )
+if not LOAD_MODEL:
+    model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.6,
+                        min_child_samples=20, min_child_weight=0.001,
+                        n_estimators=SIZE, num_leaves=63, learning_rate=0.1,
+                        reg_alpha=0.001, reg_lambda=1, objective='mae',
+                        random_state=SEED, verbosity=VERBOSE, n_jobs=-1,
+                        )
 
-if GRID_SEARCH:
-    from hypopt import GridSearch
-    param_grid = [{
-        #'n_estimators': [ SIZE ],
-        #'objective': [ 'mae' ],
-        #'boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
-        #'num_leaves': [ 31, 63, 127 ],
-        # 'learning_rate': [ 0.05, 0.1, 0.15 ],
-        # 'subsample_for_bin': [ 200000, 500000 ],
-        #'min_child_samples': [ 15, 20, 25 ],
-        #'min_child_weight': [ 0.001, 0.01, 0.1 ],
-        #'min_split_gain': [ 0.0, 0.001, 0.01 ],
-        #'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
-        #'reg_alpha': [ 0.001, 0.01, 0.1 ],
-        #'reg_lambda': [ 0.01, 0.1, 1],
-        'verbosity': [ 0 ],
-    }]
-    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
+    if GRID_SEARCH:
+        from hypopt import GridSearch
+        param_grid = [{
+            #'n_estimators': [ SIZE ],
+            #'objective': [ 'mae' ],
+            #'boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
+            #'num_leaves': [ 31, 63, 127 ],
+            # 'learning_rate': [ 0.05, 0.1, 0.15 ],
+            # 'subsample_for_bin': [ 200000, 500000 ],
+            #'min_child_samples': [ 15, 20, 25 ],
+            #'min_child_weight': [ 0.001, 0.01, 0.1 ],
+            #'min_split_gain': [ 0.0, 0.001, 0.01 ],
+            #'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
+            #'reg_alpha': [ 0.001, 0.01, 0.1 ],
+            #'reg_lambda': [ 0.01, 0.1, 1],
+            'verbosity': [ 0 ],
+        }]
+        model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
 
-time_start_tr = perf_counter()
+    time_start_tr = perf_counter()
 
-if not GRID_SEARCH:
-    model.fit(X_train, y_train)
+    if not GRID_SEARCH:
+        model.fit(X_train, y_train)
+    else:
+        model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
+        print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
+        print('BEST MODEL:', model.best_estimator_, sep='\n')
+
+    print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 else:
-    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
-    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
-    print('BEST MODEL:', model.best_estimator_, sep='\n')
+    model = load(f'{BASE_DIR}/models/{STAMP}.bin')
 
-print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
+if SAVE_MODEL:
+    dump(model, f'{BASE_DIR}/models/{STAMP}.bin', compress=True)
 
 if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])

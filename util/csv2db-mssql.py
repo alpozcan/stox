@@ -45,10 +45,10 @@ for f, t in zip(files, tickers):
 
             CREATE TABLE [dbo].[{t}](
                 [date] [date] NOT NULL,
-                [open] [decimal](9, 3) NULL,
+                [open] [decimal](9, 3) NOT NULL,
                 [high] [decimal](9, 3) NULL,
                 [low] [decimal](9, 3) NULL,
-                [close] [decimal](9, 3) NULL,
+                [close] [decimal](9, 3) NOT NULL,
                 [volume] [bigint] NULL,
             CONSTRAINT [PK_equities] PRIMARY KEY CLUSTERED  
             (
