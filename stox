@@ -37,7 +37,7 @@ timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--split-date', default='2014-01-01', help='train/test split date. Default : 2014-01-01')
-parser.add_argument('--size', default=256, help='Model size. For tree-based regressors it is the number of estimator trees to build, for neural nets it is used as a coefficient for the layer widths. Default: 256.')
+parser.add_argument('--size', default=200, help='Model size. For tree-based regressors it is the number of estimator trees to build. Default: 200.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
 parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
@@ -48,11 +48,12 @@ parser.add_argument('--dump-data', default=False, help='Dump the datasets, predi
 parser.add_argument('--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
 parser.add_argument('--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
 parser.add_argument('--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
+parser.add_argument('--stack-models', default=False, help='Use stacked models. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
 parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
 
 SPLIT_DATE = parser.parse_args().split_date
-SIZE = int(parser.parse_args().size) # Trees
+SIZE = int(parser.parse_args().size)
 SEED = int(parser.parse_args().seed)
 VERBOSE = int(parser.parse_args().verbose)
 LOOKBACK = int(parser.parse_args().lookback)
@@ -63,6 +64,7 @@ DUMP_DATA = parser.parse_args().dump_data
 LOAD_DATA = parser.parse_args().load_data
 SAVE_MODEL = parser.parse_args().save_model
 LOAD_MODEL = parser.parse_args().load_model
+STACK_MODELS = parser.parse_args().stack_models
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
@@ -109,12 +111,24 @@ print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
 categorical_columns = [ c for c in X_train.columns if 'CDL' in c ]
 
 if not LOAD_MODEL:
-    model = LGBMRegressor( boosting_type='gbdt', colsample_bytree=0.6,
-                        min_child_samples=20, min_child_weight=0.001,
-                        n_estimators=SIZE, num_leaves=63, learning_rate=0.1,
-                        reg_alpha=0.001, reg_lambda=1, objective='mae',
-                        random_state=SEED, verbosity=VERBOSE, n_jobs=-1,
-                        )
+    LGB_params = {  'boosting_type': 'gbdt', 'colsample_bytree': 0.6,
+                    'min_child_samples': 20, 'min_child_weight': 0.001,
+                    'num_leaves': 63, 'learning_rate': 0.1,
+                    'reg_alpha': 0.001, 'reg_lambda': 1, 'objective': 'mae' }
+    common_params = { 'n_estimators': SIZE, 'random_state': SEED, 'verbose': VERBOSE, 'n_jobs': -1 }
+
+    model = LGBMRegressor(**LGB_params, **common_params)
+
+    if STACK_MODELS:
+        from xgboost import XGBRegressor
+        from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, StackingRegressor
+
+        models = [ ('LGB', model) ]
+        models.append(('XGB', XGBRegressor(eval_metric='mae', **common_params)))
+        # models.append(('ETR',   ExtraTreesRegressor(**common_params)))
+        # models.append(('RFR', RandomForestRegressor(**common_params)))
+
+        model = StackingRegressor(models)
 
     if GRID_SEARCH:
         from hypopt import GridSearch
