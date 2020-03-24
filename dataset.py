@@ -29,7 +29,6 @@ DATABASE = f'sqlite:///{BASE_DIR}/db/stox.db'
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
-MIN_NUMERICAL_CARDINALITY = 6 # minimum cardinality for a feature to be considered numerical rather than categorical
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
@@ -233,10 +232,4 @@ class DataSet:
         ds.set_index('ticker', append=True, inplace=True)
         ds.sort_index(inplace=True)
 
-        #cardinalities = ds.apply(pd.Series.nunique)
-        #categoricals = list(cardinalities[cardinalities < MIN_NUMERICAL_CARDINALITY].index)
-
-        # categoricals = [c for c in ds.columns if c.startswith('f_') and 'CDL' in c]
-        # categorical_type_dict = { c: 'category' for c in categoricals }
-
-        self.data = ds #.astype(categorical_type_dict, copy=False)
+        self.data = ds
