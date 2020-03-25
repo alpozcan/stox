@@ -22,7 +22,7 @@ import os, glob
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../'
-DATABASE = f'sqlite:///{BASE_DIR}/db/stox-us-1963-2017-dividend-adjusted.db'
+DATABASE = f'sqlite:///{BASE_DIR}/db/stox.db'
 
 def read_results(silent=False):
     result_files = glob.glob(f'{BASE_DIR}results/*.csv')
