@@ -33,7 +33,7 @@ def read_results(silent=False):
                         index_col=[0], parse_dates=['predicted_at'] )
 
 def read_predictions():
-    predictions_file = f'{BASE_DIR}/output/predictions_on_test.csv.xz'
+    predictions_file = f'{BASE_DIR}/predictions/predictions_on_test.csv.xz'
     print('predictions:', datetime.fromtimestamp(os.path.getmtime(predictions_file)))
     return pd.read_csv( predictions_file,
                         index_col=[0, 1], parse_dates=['date'] )

@@ -2,7 +2,10 @@ numpy
 pandas
 scikit-learn
 SQLAlchemy
+pymssql
 lightgbm
 TA-Lib
 hypopt
 tqdm
+jupyter
+matplotlib
