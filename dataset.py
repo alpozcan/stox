@@ -107,6 +107,8 @@ class DataSet:
         d.open[d.open == 0] = np.nan #      safety net in case there are
         d.close[d.close == 0] = np.nan #    zeroes in these important fields
         d['price'] = (d['open'] + d['close']) / 2
+        d['gap']    = d['open'] - d['close'].shift(1)
+        d['spread'] = d['high'] - d['low']
         d['pc'] = (d['price'].pct_change() * 100)
         d.dropna(inplace=True)
 
@@ -166,15 +168,19 @@ class DataSet:
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
+            (d_ticker['price'] / d_ticker['price'].mean(), 'f_price'),
+            (d_ticker['gap'] / d_ticker['price'], 'f_gap'),
+            (d_ticker['spread'] / d_ticker['price'], 'f_spread'),
+            # price over its max() or min() would result in data leak
             (d_ticker['pc'], 'f_spc'),
-            # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
             ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'f_volume'),
 
             (self.d_index[country]['pc'], 'f_ipc'),
             (d_ticker['pc'] - self.d_index[country]['pc'], 'f_spc_minus_ipc'),
-            # (self.d_index[country]['volume'] / self.d_index[country]['volume'].mean(), 'ivolume')
+            # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
+            # (self.d_index[country]['volume'] / self.d_index[country]['volume'].mean(), 'f_ivolume')
             ]
 
         d_ticker['ticker'] = ticker # will be used as index
@@ -201,7 +207,6 @@ class DataSet:
             for i in range(2, (self.lookback + 1)):
                 d = pd.concat([d, d[c].shift(i).rename(f'f_past_{c[2:]}_{i}')], axis=1)
 
-        
         predictor = d[d.f_spc.notnull()].tail(1).copy()
 
         # calculate and insert the target variable column
