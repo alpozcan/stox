@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Wraps the read_csv method of Pandas to make it pickle-able (for multiprocessing)
+# DB wrappers
 
 # Copyright (C) 2017-2020 Gokalp Ozcan
 
@@ -19,5 +19,7 @@
 
 import pandas as pd
 
-def read_csv(filename):
-    return pd.read_csv(filename)
+def store_df(df, table, schema=None):
+    engine = sa.create_engine("mssql+pymssql://stox:stox@localhost:1433/stox", echo=False)
+    df.to_sql(table, schema=schema, if_exists='replace', con=engine)
+    engine.close()

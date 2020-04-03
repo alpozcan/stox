@@ -48,7 +48,6 @@ parser.add_argument('--dump-data', default=False, help='Dump the datasets, predi
 parser.add_argument('--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
 parser.add_argument('--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
 parser.add_argument('--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
-parser.add_argument('--stack-models', default=False, help='Use stacked models. Default: False', action='store_true')
 parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
 parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
 
@@ -64,10 +63,10 @@ DUMP_DATA = parser.parse_args().dump_data
 LOAD_DATA = parser.parse_args().load_data
 SAVE_MODEL = parser.parse_args().save_model
 LOAD_MODEL = parser.parse_args().load_model
-STACK_MODELS = parser.parse_args().stack_models
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
+FEATURE_SUBSAMPLE = .6
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
 tickers = market.us_stocks()
@@ -119,17 +118,6 @@ if not LOAD_MODEL:
 
     model = LGBMRegressor(**LGB_params, **common_params)
 
-    if STACK_MODELS:
-        from xgboost import XGBRegressor
-        from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, StackingRegressor
-
-        models = [ ('LGB', model) ]
-        models.append(('XGB', XGBRegressor(eval_metric='mae', **common_params)))
-        # models.append(('ETR',   ExtraTreesRegressor(**common_params)))
-        # models.append(('RFR', RandomForestRegressor(**common_params)))
-
-        model = StackingRegressor(models)
-
     if GRID_SEARCH:
         from hypopt import GridSearch
         param_grid = [{
@@ -162,26 +150,38 @@ if not LOAD_MODEL:
 else:
     model = load(f'{BASE_DIR}/models/{STAMP}.bin')
 
+if hasattr(model, 'feature_importances_') and (VERBOSE > 0 or FEATURE_SUBSAMPLE < 1.0):
+    fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance']).sort_values('importance', ascending=False)
+    print(fi)
+    if FEATURE_SUBSAMPLE < 1.0:
+        important_features = list(fi.head(round(len(features) * FEATURE_SUBSAMPLE)).index)
+        print('important features:', important_features, f'({len(important_features)})')
+        unimportant_features = [ f for f in features if f not in important_features]
+        
+        X_train.drop(unimportant_features, axis=1, inplace=True)
+        X_test.drop(unimportant_features, axis=1, inplace=True)
+        predictors.drop(unimportant_features, axis=1, inplace=True)
+
+        model = LGBMRegressor(**LGB_params, **common_params)
+        model.fit(X_train, y_train) # fit a new model with reduced subset of features
+
 if SAVE_MODEL:
     dump(model, f'{BASE_DIR}/models/{STAMP}.bin', compress=True)
-
-if VERBOSE > 0 and hasattr(model, 'feature_importances_'):
-    fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance'])
-    print(fi.sort_values('importance', ascending=False))
 
 if PREDICT:
     results = pd.DataFrame()
     for t, p in predictors.groupby(level=1):
         if p.isnull().values.any():
-            if VERBOSE > 1:
-                print('Not predicting', t, 'as it has NaN in its predictor')
-                if VERBOSE > 2:
-                    print(p)
+            print('Not predicting', t, 'as it has NaN in its predictor.')
             continue
 
         try:
             xT, yT = X_test.xs(t, level=1, drop_level=False), y_test.xs(t, level=1, drop_level=False)
         except KeyError:
+            continue
+
+        if len(yT) < MIN_TEST_SAMPLES:
+            print('Not predicting', t, 'as it has less than', MIN_TEST_SAMPLES, 'samples.')
             continue
 
         predictions = model.predict(xT)
@@ -209,6 +209,6 @@ print('Overall volatility:', volatility_on_test, ', error:', error_on_test, ', a
 if SAVE_PREDICTIONS:
     y_test = pd.concat([y_test, pd.DataFrame(predictions_on_test, index=y_test.index)], axis=1)
     y_test.columns = [*y_test.columns[:-1], 'prediction']
-    predictions_output_file = f'{BASE_DIR}/output/predictions_on_test.csv.xz'
+    predictions_output_file = f'{BASE_DIR}/predictions/predictions_on_test.csv.xz'
     y_test.to_csv(predictions_output_file, compression='xz')
     print('Saved predictions on test data to', predictions_output_file)

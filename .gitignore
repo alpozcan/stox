@@ -5,8 +5,7 @@ db/
 logs/
 results/*.csv
 !results/2019-12-23-12-30-19.csv
-output/*
-predictions_on_test/*.xz
+predictions/*
 
 # Code editor files
 *.kate-swp
