@@ -74,7 +74,7 @@ class DataSet:
 
         # imputation
         if self.imputate:
-            # d.close.replace(to_replace=0, method='ffill') # didn't change score with current data
+            d.close.replace(to_replace=0, method='ffill', inplace=True)
             d.open[d.open == 0 | d.open.isnull()] = d.close.shift(1) # fill in missing open from previous close
             # d.open[d.open == 0] = d.close # for values that the above didn't work, fill in from close. Didn't change score with current data
             if 'high' in d.columns:
@@ -103,9 +103,10 @@ class DataSet:
                     d[c] = d[c].resample(self.resample).sum()
             d.dropna(inplace=True)
 
+        # No column except 'volume' can have a zero value
+        # assert 0 not in (d.iloc[:,:-1]).values
+
         # calculate nominal price and deltas
-        d.open[d.open == 0] = np.nan #      safety net in case there are
-        d.close[d.close == 0] = np.nan #    zeroes in these important fields
         d['price'] = (d['open'] + d['close']) / 2
         d['gap']    = d['open'] - d['close'].shift(1)
         d['spread'] = d['high'] - d['low']
