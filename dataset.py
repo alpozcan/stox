@@ -89,7 +89,9 @@ class DataSet:
         d.at[d.index.weekday > 4, 'volume'] = 0
 
         # resample
-        if self.resample != 'no':
+        if self.resample == 'no':
+            d.volume = d.volume.astype('float64') # TA-Lib functions don't like integer input
+        else:
             for c in d.columns:
                 if c == 'open':
                     d[c] = d[c].resample(self.resample).first()
