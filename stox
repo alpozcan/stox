@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import pandas as pd
-import argparse, datetime, os, sys
+import argparse, datetime, os, sys, psutil
 from zipfile import ZipFile
 from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
@@ -212,3 +212,7 @@ if SAVE_PREDICTIONS:
     predictions_output_file = f'{BASE_DIR}/predictions/predictions_on_test.csv.xz'
     y_test.to_csv(predictions_output_file, compression='xz')
     print('Saved predictions on test data to', predictions_output_file)
+
+if VERBOSE > 0:
+    process = psutil.Process(os.getpid())
+    print('memory used:', round(process.memory_info().rss / (1024 ** 3), 1), 'GB')
