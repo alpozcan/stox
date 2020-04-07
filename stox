@@ -69,7 +69,7 @@ SAVE_PREDICTIONS = parser.parse_args().save_predictions
 FEATURE_SUBSAMPLE = .6
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
-tickers = market.us_stocks()
+tickers = market.asx_all_ordinaries()
 
 if LOAD_DATA:
     ds_train = load(f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin')

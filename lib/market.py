@@ -19,30 +19,58 @@
 
 import pandas as pd
 import os
+import pyodbc
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def all_stocks():
-    tickers = pd.Series(data=pd.read_sql_query(
-        "SELECT name FROM sqlite_master WHERE type='table' AND ((name LIKE '%_US') OR (name LIKE '%_AU'));",
-        'sqlite:///{BASE_DIR}/../db/stox.db',
-    )['name']).tolist()
+    dbconn = pyodbc.connect(    'DRIVER={ODBC Driver 17 for SQL Server};'
+                                'SERVER=localhost;'
+                                'DATABASE=stox;'
+                                'UID=stox;'
+                                'PWD=stox;')
+
+    tickers = pd.Series (data=pd.read_sql_query(
+        "SELECT DISTINCT ([ticker]) FROM [stox].[stocks_asx].[daily] WHERE [ticker] NOT LIKE 'X%%'",
+        dbconn)['ticker']).tolist()
+    dbconn.close()
     print(len(tickers), 'tickers')
 
     return tickers
 
-def au_stocks():
-    tickers = pd.Series(data=pd.read_sql_query(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_AU';",
-        'sqlite:///{BASE_DIR}/../db/stox.db',
-    )['name']).tolist()
+
+def asx_all_ordinaries():
+    xao_csv = f'{BASE_DIR}/../data/indices/constituents/XAO_Makeup.csv'
+    tickers = list(pd.read_csv(xao_csv)['Code'])
     print(len(tickers), 'tickers')
 
     return tickers
 
-def us_stocks():
-    tickers = pd.Series(data=pd.read_sql_query(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_US';",
-        'sqlite:///{BASE_DIR}/../db/stox.db',
-    )['name']).tolist()
-    print(len(tickers), 'tickers')
+# old sqlite stuff
 
-    return tickers
+# def all_stocks():
+#     tickers = pd.Series(data=pd.read_sql_query(
+#         "SELECT name FROM sqlite_master WHERE type='table' AND ((name LIKE '%_US') OR (name LIKE '%_AU'));",
+#         'sqlite:///{BASE_DIR}/../db/stox.db',
+#     )['name']).tolist()
+#     print(len(tickers), 'tickers')
+
+#     return tickers
+
+# def au_stocks():
+#     tickers = pd.Series(data=pd.read_sql_query(
+#         "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_AU';",
+#         'sqlite:///{BASE_DIR}/../db/stox.db',
+#     )['name']).tolist()
+#     print(len(tickers), 'tickers')
+
+#     return tickers
+
+# def us_stocks():
+#     tickers = pd.Series(data=pd.read_sql_query(
+#         "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_US';",
+#         'sqlite:///{BASE_DIR}/../db/stox.db',
+#     )['name']).tolist()
+#     print(len(tickers), 'tickers')
+
+#     return tickers

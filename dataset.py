@@ -23,9 +23,12 @@ import talib as ta
 from talib import abstract
 import multiprocessing, os
 from lib import market
+import pyodbc
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
-DATABASE = f'sqlite:///{BASE_DIR}/db/stox.db'
+
+TABLE = '[stox].[stocks_asx].[daily]'
+INDEX_TICKER = 'XAO'
 
 HIGH_OUTLIER = 890 # percentage
 LOW_OUTLIER = -89 # percentage
@@ -43,22 +46,27 @@ class DataSet:
         self.patterns = patterns
         self.keep_predictors = keep_predictors
 
-        self.d_index, self.index_features = {}, {}
-        self.d_index['US'] = self.get_index_data('GSPC')
-        self.d_index['AU'] = self.get_index_data('AORD')
-        self.index_features['US'] = self.generate_ta_features(self.d_index['US'], 'i')
-        self.index_features['AU'] = self.generate_ta_features(self.d_index['AU'], 'i')
+        self.d_index = self.get_index_data(INDEX_TICKER)
+        self.index_features = self.generate_ta_features(self.d_index, 'i')
 
         self.multi_ts_data()
 
     def get_index_data(self, index_ticker):
-        return self.preprocess_ts(pd.read_sql_query(    f"""
-                                                        SELECT * FROM `^{index_ticker}` 
-                                                        WHERE {self.predicate} 
-                                                        ORDER BY date ASC
-                                                        """,
-                                                        DATABASE,
-                                                        index_col=['date']))
+        dbconn = pyodbc.connect (   'DRIVER={ODBC Driver 17 for SQL Server};'
+                                    'SERVER=localhost;'
+                                    'DATABASE=stox;'
+                                    'UID=stox;'
+                                    'PWD=stox;')
+
+        data = pd.read_sql_query(   f"""
+                                    SELECT * FROM {TABLE} 
+                                    WHERE {self.predicate} AND ticker = '{INDEX_TICKER}' 
+                                    ORDER BY date ASC
+                                     """,
+                                    dbconn,
+                                    index_col=['date'])
+        dbconn.close()
+        return self.preprocess_ts(data)
 
     def preprocess_ts(self, d):
         """ Preprocess time series data """
@@ -156,14 +164,21 @@ class DataSet:
 
     def ts_data(self, ticker): # price changes of both the security and the market
         """ Fetch time series data for the requested ticker and generate features """
-        country = ticker[-2:]
-        d_ticker = self.preprocess_ts(pd.read_sql_query(    f"""
-                                                            SELECT * FROM `{ticker}` 
-                                                            WHERE {self.predicate}  
-                                                            ORDER BY date ASC
-                                                            """,
-                                                            DATABASE,
-                                                            index_col=['date']))
+        dbconn = pyodbc.connect (   'DRIVER={ODBC Driver 17 for SQL Server};'
+                                    'SERVER=localhost;'
+                                    'DATABASE=stox;'
+                                    'UID=stox;'
+                                    'PWD=stox;')
+
+        data = pd.read_sql_query(   f"""
+                                    SELECT * FROM {TABLE} 
+                                    WHERE {self.predicate} AND ticker = '{ticker}' 
+                                    ORDER BY date ASC
+                                    """,
+                                    dbconn,
+                                    index_col=['date'])
+        dbconn.close()
+        d_ticker = self.preprocess_ts(data)
 
         if len(d_ticker) <= self.lookback:
             return pd.DataFrame()
@@ -180,10 +195,10 @@ class DataSet:
             (d_ticker['close'], 'close'),
             ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'f_volume'),
 
-            (self.d_index[country]['pc'], 'f_ipc'),
-            (d_ticker['pc'] - self.d_index[country]['pc'], 'f_spc_minus_ipc'),
+            (self.d_index['pc'], 'f_ipc'),
+            (d_ticker['pc'] - self.d_index['pc'], 'f_spc_minus_ipc'),
             # TODO: calculate 'polarity' based on directions of spc & mpc, like 1 if they're both - or +, -1 otherwise
-            # (self.d_index[country]['volume'] / self.d_index[country]['volume'].mean(), 'f_ivolume')
+            # (self.d_index['volume'] / self.d_index['volume'].mean(), 'f_ivolume')
             ]
 
         d_ticker['ticker'] = ticker # will be used as index
@@ -198,8 +213,8 @@ class DataSet:
         if self.ta: # most of these are 'rolling window ribbon', i.e. multiple features for a range of periods up to self.lookback
             features.extend(self.generate_ta_features(d_ticker))
 
-        d = pd.concat([d[0] for d in (features + self.index_features[country])], axis=1, sort=False)
-        d.columns = [d[1] for d in (features + self.index_features[country])]
+        d = pd.concat([d[0] for d in (features + self.index_features)], axis=1, sort=False)
+        d.columns = [d[1] for d in (features + self.index_features)]
 
         # Filter out outliers
         d.f_spc.drop(d.f_spc[d.f_spc > HIGH_OUTLIER].index, inplace=True)
