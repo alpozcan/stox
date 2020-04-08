@@ -24,6 +24,7 @@ from talib import abstract
 import multiprocessing, os
 from lib import market
 import pyodbc
+from fbprophet import Prophet
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -123,6 +124,22 @@ class DataSet:
         d['pc'] = (d['price'].pct_change() * 100)
         d.dropna(inplace=True)
 
+        if len(d) <= self.lookback:
+            return
+
+        # fbprophet predictions as a feature
+        if self.resample == 'M':
+            dp = pd.concat([d.index.to_series(), d.close], axis=1)
+            dp.columns = ['ds', 'y']
+            m = Prophet(seasonality_mode='multiplicative').fit(dp)
+            ftr = m.make_future_dataframe(periods=self.lookfwd, freq='M')
+            forecast = (m.predict(ftr).shift(-self.lookfwd))[['ds', 'yhat']]
+            forecast.columns = ['date', 'forecast']
+            forecast.set_index('date', inplace=True)
+            d = pd.concat([d, forecast], axis=1)
+            d['forecast'] = d['forecast'] / d['close']
+            print(d.forecast)
+
         return d
 
     def generate_ta_features(self, data, prefix=''):
@@ -180,7 +197,7 @@ class DataSet:
         dbconn.close()
         d_ticker = self.preprocess_ts(data)
 
-        if len(d_ticker) <= self.lookback:
+        if d_ticker is None:
             return pd.DataFrame()
 
         # Feature generation
@@ -194,6 +211,7 @@ class DataSet:
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
             ((d_ticker['volume'] / d_ticker['volume'].mean()) * (d_ticker['price'] / d_ticker['price'].mean()), 'f_volume'),
+            (d_ticker['forecast'], 'f_forecast'),
 
             (self.d_index['pc'], 'f_ipc'),
             (d_ticker['pc'] - self.d_index['pc'], 'f_spc_minus_ipc'),
