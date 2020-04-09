@@ -128,17 +128,16 @@ class DataSet:
             return
 
         # fbprophet predictions as a feature
-        if self.resample == 'M':
-            dp = pd.concat([d.index.to_series(), d.close], axis=1)
-            dp.columns = ['ds', 'y']
-            m = Prophet(seasonality_mode='multiplicative').fit(dp)
-            ftr = m.make_future_dataframe(periods=self.lookfwd, freq='M')
-            forecast = (m.predict(ftr).shift(-self.lookfwd))[['ds', 'yhat']]
-            forecast.columns = ['date', 'forecast']
-            forecast.set_index('date', inplace=True)
-            d = pd.concat([d, forecast], axis=1)
-            d['forecast'] = d['forecast'] / d['close']
-            print(d.forecast)
+        dp = pd.concat([d.index.to_series(), d.close], axis=1)
+        dp.columns = ['ds', 'y']
+        m = Prophet(seasonality_mode='multiplicative').fit(dp)
+        ftr = m.make_future_dataframe(periods=self.lookfwd, freq=self.resample)
+        forecast = (m.predict(ftr).shift(-self.lookfwd))[['ds', 'yhat']]
+        forecast.columns = ['date', 'forecast']
+        forecast.set_index('date', inplace=True)
+        d = pd.concat([d, forecast], axis=1)
+        d['forecast'] = d['forecast'] / d['close']
+        print(d.forecast)
 
         return d
 
