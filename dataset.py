@@ -205,10 +205,10 @@ class DataSet:
         # Feature generation
         features = [
             (d_ticker['price'], 'price'),
-            (d_ticker['price'] / d_ticker['price'].mean(), 'f_price'),
+            # price over its max() or min() would result in data leak
+            # (d_ticker['price'] / d_ticker['price'].mean(), 'f_price'), # potential data leak. Negligable difference in score, so commented out to be safe.
             (d_ticker['gap'] / d_ticker['price'], 'f_gap'),
             (d_ticker['spread'] / d_ticker['price'], 'f_spread'),
-            # price over its max() or min() would result in data leak
             (d_ticker['pc'], 'f_spc'),
             (d_ticker['open'], 'open'),
             (d_ticker['close'], 'close'),
