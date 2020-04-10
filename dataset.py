@@ -21,10 +21,13 @@ import numpy as np
 import pandas as pd
 import talib as ta
 from talib import abstract
-import multiprocessing, os
+import multiprocessing, os, logging
 from lib import market
+from lib.suppress_stdout_stderr import suppress_stdout_stderr
 import pyodbc
 from fbprophet import Prophet
+
+logging.getLogger('fbprophet').setLevel(logging.WARNING)
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -122,22 +125,22 @@ class DataSet:
         d['gap']    = d['open'] - d['close'].shift(1)
         d['spread'] = d['high'] - d['low']
         d['pc'] = (d['price'].pct_change() * 100)
-        d.dropna(inplace=True)
 
-        if len(d) <= self.lookback:
+        if len(d.dropna()) <= self.lookback:
             return
 
         # fbprophet predictions as a feature
         dp = pd.concat([d.index.to_series(), d.close], axis=1)
         dp.columns = ['ds', 'y']
-        m = Prophet(seasonality_mode='multiplicative').fit(dp)
+        with suppress_stdout_stderr():
+            m = Prophet(seasonality_mode='multiplicative').fit(dp)
         ftr = m.make_future_dataframe(periods=self.lookfwd, freq=self.resample)
         forecast = (m.predict(ftr).shift(-self.lookfwd))[['ds', 'yhat']]
         forecast.columns = ['date', 'forecast']
         forecast.set_index('date', inplace=True)
         d = pd.concat([d, forecast], axis=1)
         d['forecast'] = d['forecast'] / d['close']
-        print(d.forecast)
+        d.dropna(inplace=True)
 
         return d
 

@@ -9,3 +9,4 @@ hypopt
 tqdm
 jupyter
 matplotlib
+fbprophet
