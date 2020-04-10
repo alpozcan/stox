@@ -36,7 +36,7 @@ day_of_week = 'FRI' if day_of_week in ['SAT', 'SUN'] else day_of_week
 timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--split-date', default='2014-01-01', help='train/test split date. Default : 2014-01-01')
+parser.add_argument('--split-date', default='2016-01-01', help='train/test split date. Default : 2016-01-01')
 parser.add_argument('--size', default=200, help='Model size. For tree-based regressors it is the number of estimator trees to build. Default: 200.')
 parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
@@ -66,7 +66,7 @@ LOAD_MODEL = parser.parse_args().load_model
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
-FEATURE_SUBSAMPLE = .6
+FEATURE_SUBSAMPLE = 1.0
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
 tickers = market.asx_all_ordinaries()
@@ -103,11 +103,11 @@ predictors = X_test[y_test.isnull()]
 X_test.drop(predictors.index, inplace=True)
 y_test.drop(predictors.index, inplace=True)
 
-print   (   'X_train:', X_train.shape, 'X_test:', X_test.shape,
-            'y_train:', y_train.shape, 'y_test:', y_test.shape,
-            'predictors:', predictors.shape )
-
-categorical_columns = [ c for c in X_train.columns if 'CDL' in c ]
+train_samples, test_samples, total_samples = len(X_train), len(X_test), len(X_train) + len(X_test)
+print(  'X_train:', X_train.shape, 'X_test:', X_test.shape,
+        'y_train:', y_train.shape, 'y_test:', y_test.shape,
+        'predictors:', predictors.shape, '-',
+        round(100 * train_samples / total_samples), '/', round(100 * test_samples / total_samples), '% split')
 
 if not LOAD_MODEL:
     LGB_params = {  'boosting_type': 'gbdt', 'colsample_bytree': 0.6,
