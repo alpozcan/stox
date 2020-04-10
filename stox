@@ -155,7 +155,8 @@ if hasattr(model, 'feature_importances_') and (VERBOSE > 0 or FEATURE_SUBSAMPLE 
     print(fi)
     if FEATURE_SUBSAMPLE < 1.0:
         important_features = list(fi.head(round(len(features) * FEATURE_SUBSAMPLE)).index)
-        print('important features:', important_features, f'({len(important_features)})')
+        if VERBOSE > 1:
+            print('important features:', important_features, f'({len(important_features)})')
         unimportant_features = [ f for f in features if f not in important_features]
         
         X_train.drop(unimportant_features, axis=1, inplace=True)

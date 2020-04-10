@@ -254,8 +254,8 @@ class DataSet:
         # d = pd.concat([d, predictor], axis=0, sort=False)
 
         # debug
-        # if ticker == 'GE_US' or ticker == 'ANZ_AU':
-        #     d.to_csv(f'{BASE_DIR}/debug/{ticker}.csv')
+        # if ticker == 'ANZ':
+        #     d.to_csv(f'{BASE_DIR}/debug-feature-dump-{ticker}.csv')
 
         d.f_volume[d.f_volume == 0] = np.nan # Get rid of zero-volume samples
         # d.future[d.future == 0] = np.nan # Also where the target is zero
