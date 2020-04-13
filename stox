@@ -59,8 +59,8 @@ STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & mode
 tickers = ticker_lists.by_market([ f"'{m}'" for m in MARKETS.split(',')])
 
 if LOAD_DATA:
-    ds_train = load(f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin')
-    ds_test  = load(f'{BASE_DIR}/datasets/ds_test_{STAMP}.bin')
+    ds_train = load(f'{BASE_DIR}/ds_dumps/ds_train_{STAMP}.bin')
+    ds_test  = load(f'{BASE_DIR}/ds_dumps/ds_test_{STAMP}.bin')
 else:
     from dataset import DataSet
     ds_train = DataSet(tickers=tickers, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
@@ -75,8 +75,8 @@ if VERBOSE > 0:
     print(ds_test.info(memory_usage='deep'))
 
 if DUMP_DATA:
-    dump(ds_train, f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin', compress=True)
-    dump(ds_test , f'{BASE_DIR}/datasets/ds_test_{STAMP}.bin', compress=True)
+    dump(ds_train, f'{BASE_DIR}/ds_dumps/ds_train_{STAMP}.bin', compress=True)
+    dump(ds_test , f'{BASE_DIR}/ds_dumps/ds_test_{STAMP}.bin', compress=True)
 
 features = [ f for f in list(ds_train.columns) if f.startswith('f_') ]
 
