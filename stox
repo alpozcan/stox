@@ -10,6 +10,7 @@ from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from lightgbm import LGBMRegressor
 import lib.tickers as ticker_lists
+from lib.db import db_engine
 from joblib import dump, load
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -55,7 +56,7 @@ SAVE_PREDICTIONS = parser.parse_args().save_predictions
 
 FEATURE_SUBSAMPLE = 1.0
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
-STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
+STAMP = f"{MARKETS.replace(',', '-')}_{LOOKBACK}_{RESAMPLE}_{LOOKFWD}" # to be used in naming dataset & model dump files
 tickers = ticker_lists.by_market([ f"'{m}'" for m in MARKETS.split(',')])
 
 if LOAD_DATA:
@@ -184,9 +185,11 @@ if PREDICT:
                                     (results.loc[t, 'var_score'] if results.loc[t, 'var_score'] > 0 else 0) * \
                                     (results.loc[t, 'alpha'] if results.loc[t, 'alpha'] > 0 else 0)
 
+    results.index.rename('ticker', inplace=True)
     results = results.sort_values('potential', ascending=False).round(2)
     print(results, results.describe(), sep='\n')
-    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv', index_label='ticker')
+    results.to_csv(f'{BASE_DIR}/results/{timestamp}.csv')
+    results.reset_index().to_sql(STAMP, if_exists='replace', schema='results', index=False, con=db_engine())
 
 # Calculate and print prediction results on the test data
 predictions_on_test = model.predict(X_test)
@@ -197,9 +200,7 @@ print('Overall volatility:', volatility_on_test, ', error:', error_on_test, ', a
 if SAVE_PREDICTIONS:
     y_test = pd.concat([y_test, pd.DataFrame(predictions_on_test, index=y_test.index)], axis=1)
     y_test.columns = [*y_test.columns[:-1], 'prediction']
-    predictions_output_file = f'{BASE_DIR}/predictions/predictions_on_test.csv.xz'
-    y_test.to_csv(predictions_output_file, compression='xz')
-    print('Saved predictions on test data to', predictions_output_file)
+    y_test.reset_index().to_sql(STAMP, if_exists='replace', schema='predictions', index=False, con=db_engine())
 
 if VERBOSE > 0:
     process = psutil.Process(os.getpid())
