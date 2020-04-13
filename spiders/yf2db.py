@@ -11,8 +11,8 @@ VERBOSE = True
 
 INDICES_DIR = f'{os.path.dirname(os.path.realpath(__file__))}/../data/indices'
 INDICES = [
-    { 'market': 'AU' , 'ticker_suffix': '.AX', 'index_ticker': '^AORD' , 'file': '/'.join([INDICES_DIR, 'XAO_Makeup.csv']) },
     { 'market': 'US' , 'ticker_suffix': ''   , 'index_ticker': '^GSPC' , 'file': '/'.join([INDICES_DIR, 'SP500.csv']) },
+    { 'market': 'AU' , 'ticker_suffix': '.AX', 'index_ticker': '^AORD' , 'file': '/'.join([INDICES_DIR, 'XAO_Makeup.csv']) },
 ]
 
 TABLE = '[stocks].[daily]'
