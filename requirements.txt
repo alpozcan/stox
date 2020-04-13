@@ -10,6 +10,7 @@ tqdm
 jupyter
 matplotlib
 psutil
+nerodia
 Cython
 convertdate
 lunarcalendar
