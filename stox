@@ -37,6 +37,7 @@ parser.add_argument('-a', '--save-model', default=False, help='Save the trained 
 parser.add_argument('-o', '--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
 parser.add_argument('-p', '--predict', default=False, help='Make predictions. Default: False', action='store_true')
 parser.add_argument('-e', '--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
+parser.add_argument('-i', '--intraday-predictions', default=False, help='Fetch and make predictions on intraday data. Default: False', action='store_true')
 
 MARKETS = parser.parse_args().markets
 SPLIT_DATE = parser.parse_args().split_date
@@ -53,6 +54,7 @@ SAVE_MODEL = parser.parse_args().save_model
 LOAD_MODEL = parser.parse_args().load_model
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
+INTRADAY_PREDICTIONS = parser.parse_args().intraday_predictions
 
 FEATURE_SUBSAMPLE = 1.0
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
@@ -207,4 +209,4 @@ if SAVE_PREDICTIONS:
 
 if VERBOSE > 0:
     process = psutil.Process(os.getpid())
-    print('memory used:', round(process.memory_info().rss / (1024 ** 3), 1), 'GB')
+    print('memory used:', round(process.memory_info().rss / (2 ** 30), 1), 'GB')
