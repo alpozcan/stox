@@ -24,7 +24,7 @@ from time import perf_counter
 from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.preprocessing import MinMaxScaler
 from lightgbm import LGBMRegressor
-from lib import market
+import lib.tickers as ticker_lists
 from joblib import dump, load
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -36,21 +36,23 @@ day_of_week = 'FRI' if day_of_week in ['SAT', 'SUN'] else day_of_week
 timestamp = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--split-date', default='2016-01-01', help='train/test split date. Default : 2016-01-01')
-parser.add_argument('--size', default=200, help='Model size. For tree-based regressors it is the number of estimator trees to build. Default: 200.')
-parser.add_argument('--seed', default=6, help='Seed for initialising the model weights with')
-parser.add_argument('--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
-parser.add_argument('--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
-parser.add_argument('--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
-parser.add_argument('--resample', default='M', help="Period size. 'no' to turn off resampling, or any pandas-format resampling specification. Default is monthly resampling.")
-parser.add_argument('--grid-search', default=False, help='Enable grid search of hyperparameters. Default: disabled', action='store_true')
-parser.add_argument('--dump-data', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
-parser.add_argument('--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
-parser.add_argument('--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
-parser.add_argument('--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
-parser.add_argument('--predict', default=False, help='Make predictions. Default: False', action='store_true')
-parser.add_argument('--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
+parser.add_argument('-m', '--markets', default='AU', help='Comma-separated list of markets. Default : AU')
+parser.add_argument('-s', '--split-date', default='2016-01-01', help='Train/Test split date. Default : 2016-01-01')
+parser.add_argument('-t', '--size', default=200, help='Number of estimator trees to build. Default: 200.')
+parser.add_argument('-r', '--seed', default=6, help='Seed for initialising the model weights with')
+parser.add_argument('-v', '--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
+parser.add_argument('-b', '--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
+parser.add_argument('-f', '--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
+parser.add_argument('-w', '--resample', default=f'W-{day_of_week}', help="Resampling window size. 'no' to turn off resampling, or any pandas-format resampling specification. Default: weekly resampling on current business day.")
+parser.add_argument('-g', '--grid-search', default=False, help='Enable grid search of hyperparameters. Default: disabled', action='store_true')
+parser.add_argument('-d', '--dump-data', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
+parser.add_argument('-l', '--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
+parser.add_argument('-a', '--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
+parser.add_argument('-o', '--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
+parser.add_argument('-p', '--predict', default=False, help='Make predictions. Default: False', action='store_true')
+parser.add_argument('-e', '--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
 
+MARKETS = parser.parse_args().markets
 SPLIT_DATE = parser.parse_args().split_date
 SIZE = int(parser.parse_args().size)
 SEED = int(parser.parse_args().seed)
@@ -69,7 +71,7 @@ SAVE_PREDICTIONS = parser.parse_args().save_predictions
 FEATURE_SUBSAMPLE = 1.0
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
 STAMP = f'{LOOKBACK}-{RESAMPLE}-{LOOKFWD}' # to be used in naming dataset & model dump files
-tickers = market.asx_all_ordinaries()
+tickers = ticker_lists.by_market([ f"'{m}'" for m in MARKETS.split(',')])
 
 if LOAD_DATA:
     ds_train = load(f'{BASE_DIR}/datasets/ds_train_{STAMP}.bin')
@@ -164,7 +166,7 @@ if hasattr(model, 'feature_importances_') and (VERBOSE > 0 or FEATURE_SUBSAMPLE 
         predictors.drop(unimportant_features, axis=1, inplace=True)
 
         model = LGBMRegressor(**LGB_params, **common_params)
-        model.fit(X_train, y_train) # fit a new model with reduced subset of features
+        model.fit(X_train, y_train) # fit a new model on reduced set of features
 
 if SAVE_MODEL:
     dump(model, f'{BASE_DIR}/models/{STAMP}.bin', compress=True)

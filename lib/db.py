@@ -17,9 +17,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pandas as pd
+import pyodbc
 
-def store_df(df, table, schema=None):
-    engine = sa.create_engine("mssql+pymssql://stox:stox@localhost:1433/stox", echo=False)
-    df.to_sql(table, schema=schema, if_exists='replace', con=engine)
-    engine.close()
+def db_connection():
+    return pyodbc.connect   (   'DRIVER={ODBC Driver 17 for SQL Server};'
+                                'SERVER=host;'
+                                'DATABASE=stox;'
+                                'UID=stox;'
+                                'PWD=stox;')
