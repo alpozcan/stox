@@ -20,7 +20,7 @@ fp.set_preference("browser.helperApps.neverAsk.saveToDisk", 'text/plain,text/csv
 fp.set_preference('browser.download.manager.showWhenStarting', False)
 fp.set_preference("browser.cache.disk.enable", False)
 
-b = Browser(browser=webdriver.Firefox(fp))
+b = Browser(browser=webdriver.Firefox(fp, service_log_path='/dev/null'))
 
 b.goto(LOGIN_PAGE)
 slp(2)
@@ -36,15 +36,11 @@ b.link(text='Market Indices').click()
 slp(3)
 
 b.links(title='Index Makeup')[0].click()
-slp(10)
+slp(14)
 
-try:
-    os.remove(XAO_FILE)
-except FileNotFoundError:
-    pass
-
+os.remove(XAO_FILE)
 b.link(text='Download CSV').click()
-slp(10)
+slp(8)
 
 b.link(id='ctl00_LoginControl1_btnLogout_implementation').click()
 slp(3)
