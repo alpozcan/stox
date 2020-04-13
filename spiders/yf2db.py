@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-import os, sys, pyodbc
+import os, sys, pyodbc, argparse
 import pandas as pd
 import yfinance as yf
 from math import isnan
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--markets', default='', help='Comma-separated list of markets. Default : AU')
+
+MARKETS = parser.parse_args().markets
+if MARKETS == '':
+    print('no markets were given, exiting.')
+    sys.exit()
 
 # Configuration
 INFO = False # Whether to fetch & insert ticker info
@@ -30,6 +38,9 @@ def getCount():
 count = getCount() # initial row count before the inserts
 
 for i in INDICES:
+    if i['market'] not in MARKETS:
+        continue
+
     constituents = pd.read_csv(i['file'], header=0, usecols=[0]).iloc[:, 0].tolist()
     tickers = [ i['index_ticker'] ] + [ t + i['ticker_suffix'] for t in constituents ]
     print('Will fetch', len(tickers), 'tickers for', i['index_ticker'])

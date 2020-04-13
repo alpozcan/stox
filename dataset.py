@@ -222,7 +222,6 @@ class DataSet:
         future = (d['price'].shift(self.lookfwd * -1) / d['price'] - 1) * 100
 
         d = pd.concat([d, future.rename('future')], axis=1)
-        # d = pd.concat([d, predictor], axis=0, sort=False)
 
         # debug
         # if ticker[1] == 'ANZ':
