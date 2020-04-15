@@ -93,7 +93,7 @@ X_test = ds_test[features]
 y_test = ds_test['future']
 
 predictors = X_test[y_test.isnull()]
-predictors = predictors.loc[[predictors.index.levels[0].max(), ]]
+predictors_latest = predictors.index.get_level_values('date').max()
 X_test.drop(predictors.index, inplace=True)
 y_test.drop(predictors.index, inplace=True)
 
@@ -166,6 +166,10 @@ if SAVE_MODEL:
 if PREDICT:
     results = pd.DataFrame()
     for t, p in predictors.groupby(level=1):
+        if p.index.get_level_values('date').values[0] != predictors_latest:
+            print('Not predicting', t, 'as its predictor is out-of-date.')
+            continue
+
         if p.isnull().values.any():
             print('Not predicting', t, 'as it has NaN in its predictor.')
             continue
