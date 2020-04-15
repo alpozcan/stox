@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Download the current ASX All Ordinaries(XAO) index table from Westpac
-import os, random, time
+import os, random, time, sys
 from selenium import webdriver
 from nerodia.browser import Browser
 
@@ -39,6 +39,9 @@ slp(3)
 os.remove(INDICES_FILE)
 b.link(text='Download CSV').click()
 slp(8)
+if not os.isfile(INDICES_FILE):
+    print(f'{INDICES_FILE} not in place! Exiting.')
+    sys.exit(1)
 
 b.links(title='Index Makeup')[0].click()
 slp(14)
@@ -46,6 +49,9 @@ slp(14)
 os.remove(XAO_FILE)
 b.link(text='Download CSV').click()
 slp(10)
+if not os.isfile(XAO_FILE):
+    print(f'{XAO_FILE} not in place! Exiting.')
+    sys.exit(1)
 
 b.link(id='ctl00_LoginControl1_btnLogout_implementation').click()
 slp(3)
