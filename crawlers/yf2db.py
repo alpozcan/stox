@@ -46,7 +46,7 @@ for i in INDICES:
     print('Will fetch', len(tickers), 'tickers for', i['index_ticker'])
 
     for ticker in tickers:
-        print('\nfetch', ticker)
+        # print('\nfetch', ticker)
         yf_ticker = yf.Ticker(ticker)
         data = yf_ticker.history(period="max", auto_adjust=False).reset_index()
 
