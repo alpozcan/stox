@@ -1,5 +1,5 @@
 *.bin
-!data/indices/
+data/indices/
 logs/
 results/
 
