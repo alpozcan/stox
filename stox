@@ -93,6 +93,7 @@ X_test = ds_test[features]
 y_test = ds_test['future']
 
 predictors = X_test[y_test.isnull()]
+predictors = predictors.loc[[predictors.index.levels[0].max(), ]]
 X_test.drop(predictors.index, inplace=True)
 y_test.drop(predictors.index, inplace=True)
 
