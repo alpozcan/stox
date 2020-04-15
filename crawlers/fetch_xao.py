@@ -6,6 +6,7 @@ from nerodia.browser import Browser
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 INDICES_DIR = BASE_DIR + '/../data/indices'
+INDICES_FILE = INDICES_DIR + '/Market_Indices.csv'
 XAO_FILE = INDICES_DIR + '/XAO_Makeup.csv'
 
 LOGIN_PAGE = 'https://onlineinvesting.westpac.com.au/login'
@@ -35,12 +36,16 @@ slp(2)
 b.link(text='Market Indices').click()
 slp(3)
 
+os.remove(INDICES_FILE)
+b.link(text='Download CSV').click()
+slp(8)
+
 b.links(title='Index Makeup')[0].click()
 slp(14)
 
 os.remove(XAO_FILE)
 b.link(text='Download CSV').click()
-slp(8)
+slp(10)
 
 b.link(id='ctl00_LoginControl1_btnLogout_implementation').click()
 slp(3)
