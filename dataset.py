@@ -8,9 +8,11 @@ from talib import abstract
 import multiprocessing, os, logging
 from lib.db import db_connection
 import lib.tickers as ticker_lists
+import lib.intraday as iday
 from lib.suppress_stdout_stderr import suppress_stdout_stderr
 import pyodbc
 from fbprophet import Prophet
+from datetime import datetime
 
 logging.getLogger('fbprophet').setLevel(logging.WARNING)
 
@@ -23,7 +25,7 @@ LOW_OUTLIER = -89 # percentage
 
 class DataSet:
     """ This class encapsulates the whole dataset, with DB I/O and preprocessing functions """
-    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, keep_predictors=False):
+    def __init__(self, tickers, lookback, lookfwd, predicate="date >= '1960-01-01'", imputate=True, resample='no', ta=True, patterns=True, keep_predictors=False, intraday=False):
         self.tickers = tickers
         self.markets = set(t[0] for t in tickers)
         self.lookback = lookback
@@ -34,6 +36,11 @@ class DataSet:
         self.ta = ta
         self.patterns = patterns
         self.keep_predictors = keep_predictors
+        self.intraday = keep_predictors and intraday
+        if self.intraday:
+            self.intraday_data = iday.parse()
+            # self.today = datetime.now().date()
+            self.today = datetime.strptime('2020-04-14', '%Y-%m-%d').date()
 
         self.d_index, self.index_features = { }, { }
         for i in ticker_lists.indices():
@@ -165,6 +172,16 @@ class DataSet:
                                     dbconn,
                                     index_col=['date'])
         dbconn.close()
+
+        if self.intraday:
+            try:
+                intraday_data_sample = self.intraday_data.loc[[(self.today, ticker[0], ticker[1])]]
+            except KeyError:
+                pass
+            else:
+                intraday_data_sample.reset_index(level=[1, 2], inplace=True)
+                data = pd.concat([data, intraday_data_sample])
+
         d_ticker = self.preprocess_ts(data)
 
         if market_index:

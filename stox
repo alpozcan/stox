@@ -69,8 +69,8 @@ if LOAD_DATA:
     ds_test  = load(f'{BASE_DIR}/ds_dumps/ds_test_{STAMP}.bin')
 else:
     from dataset import DataSet
-    ds_train = DataSet(tickers=TICKERS, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'", resample=RESAMPLE).data
-    ds_test = DataSet(tickers=TICKERS, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, keep_predictors=True).data
+    ds_train = DataSet(tickers=TICKERS, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date < '{SPLIT_DATE}'" , resample=RESAMPLE).data
+    ds_test  = DataSet(tickers=TICKERS, lookback=LOOKBACK, lookfwd=LOOKFWD, predicate=f"date >= '{SPLIT_DATE}'", resample=RESAMPLE, keep_predictors=True, intraday=INTRADAY_PREDICTIONS).data
 
 if VERBOSE > 0:
     print('\n--------------------------- Train dataset ---------------------------')
