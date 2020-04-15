@@ -14,7 +14,7 @@ if MARKETS == '':
 
 # Configuration
 INFO = False # Whether to fetch & insert ticker info
-VERBOSE = True
+VERBOSE = False
 # end Configuration
 
 INDICES_DIR = f'{os.path.dirname(os.path.realpath(__file__))}/../data/indices'
@@ -79,4 +79,4 @@ for i in INDICES:
 
         conn.commit()
 
-print(getCount() - count, 'rows inserted.')
+print('yf2db.py:', getCount() - count, 'rows inserted.')

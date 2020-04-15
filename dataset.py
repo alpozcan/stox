@@ -39,8 +39,7 @@ class DataSet:
         self.intraday = keep_predictors and intraday
         if self.intraday:
             self.intraday_data = iday.parse()
-            # self.today = datetime.now().date()
-            self.today = datetime.strptime('2020-04-14', '%Y-%m-%d').date()
+            self.today = datetime.now().date()
 
         self.d_index, self.index_features = { }, { }
         for i in ticker_lists.indices():
