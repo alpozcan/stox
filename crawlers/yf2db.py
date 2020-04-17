@@ -19,8 +19,8 @@ if MARKETS == '':
 
 INDICES_DIR = f'{os.path.dirname(os.path.realpath(__file__))}/../data/indices'
 INDICES = [
-    { 'market': 'US' , 'ticker_suffix': ''   , 'index_ticker': '^GSPC' , 'file': '/'.join([INDICES_DIR, 'SP500.csv']) },
-    { 'market': 'AU' , 'ticker_suffix': '.AX', 'index_ticker': '^AORD' , 'file': '/'.join([INDICES_DIR, 'XAO_Makeup.csv']) },
+    { 'market': 'US' , 'ticker_suffix': ''   , 'index_ticker': '^GSPC' , 'file': '/'.join([INDICES_DIR, 'SP500.csv']), 'skiprows': None },
+    { 'market': 'AU' , 'ticker_suffix': '.AX', 'index_ticker': '^AORD' , 'file': '/'.join([INDICES_DIR, 'XAO_Makeup.csv']), 'skiprows': [0] },
 ]
 
 TABLE = '[stocks].[daily]'
@@ -41,7 +41,7 @@ for i in INDICES:
     if i['market'] not in MARKETS:
         continue
 
-    constituents = pd.read_csv(i['file'], header=0, usecols=[0]).iloc[:, 0].tolist()
+    constituents = pd.read_csv(i['file'], skiprows=i['skiprows'], header=0, usecols=[0]).iloc[:, 0].tolist()
     tickers = [ i['index_ticker'] ] + [ t + i['ticker_suffix'] for t in constituents ]
     print('Will fetch', len(tickers), 'tickers for', i['index_ticker'])
 
