@@ -140,7 +140,8 @@ if not LOAD_MODEL:
         print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
         print('BEST MODEL:', model.best_estimator_, sep='\n')
 
-    print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
+    if VERBOSE > 0:
+        print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
 else:
     model = load(f'{BASE_DIR}/models/{STAMP}.bin')
 
@@ -167,11 +168,13 @@ if PREDICT:
     results = pd.DataFrame()
     for t, p in predictors.groupby(level=1):
         if p.index.get_level_values('date').values[0] != predictors_latest:
-            print('Not predicting', t, 'as its predictor is out-of-date.')
+            if VERBOSE > 0:
+                print('Not predicting', t, 'as its predictor is out-of-date.')
             continue
 
         if p.isnull().values.any():
-            print('Not predicting', t, 'as it has NaN in its predictor.')
+            if VERBOSE > 0:
+                print('Not predicting', t, 'as it has NaN in its predictor.')
             continue
 
         try:
@@ -180,7 +183,8 @@ if PREDICT:
             continue
 
         if len(yT) < MIN_TEST_SAMPLES:
-            print('Not predicting', t, 'as it has less than', MIN_TEST_SAMPLES, 'samples.')
+            if VERBOSE > 0:
+                print('Not predicting', t, 'as it has less than', MIN_TEST_SAMPLES, 'samples.')
             continue
 
         predictions = model.predict(xT)
@@ -197,7 +201,9 @@ if PREDICT:
 
     results.index.rename('ticker', inplace=True)
     results = results.sort_values('potential', ascending=False).round(2)
-    print(results, results.describe(), sep='\n')
+    print(results)
+    if VERBOSE > 0:
+        print(results.describe())
     results.to_csv(f'{BASE_DIR}/results/{TIMESTAMP}.csv')
     results.reset_index().to_sql(STAMP, if_exists='replace', schema='results', index=False, con=db_engine())
 
