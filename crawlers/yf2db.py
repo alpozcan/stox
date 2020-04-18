@@ -7,11 +7,9 @@ from math import isnan
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--markets', default='', help='Comma-separated list of markets. Default : AU')
 parser.add_argument('-v', '--verbose', default=False, help='Enable verbose mode. Default: False', action='store_true')
-parser.add_argument('-i', '--fetch-info', default=False, help='Whether to fetch & insert ticker info. Default: False', action='store_true')
 
 MARKETS = parser.parse_args().markets
 VERBOSE = parser.parse_args().verbose
-INFO = parser.parse_args().fetch_info
 
 if MARKETS == '':
     print('no markets were given, exiting.')
@@ -111,10 +109,6 @@ for i in INDICES:
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) """
                 cursor.execute(query, *new_values)
                 num_inserted += 1
-
-        if INFO:
-            info = yf_ticker.info
-            print(info)
 
         conn.commit()
 

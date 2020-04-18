@@ -16,3 +16,5 @@ convertdate
 lunarcalendar
 fbprophet
 plotly
+lxml
+yfinance
