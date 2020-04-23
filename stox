@@ -4,14 +4,13 @@
 
 import pandas as pd
 import argparse, datetime, os, sys, psutil
-from zipfile import ZipFile
 from time import perf_counter
+from joblib import dump, load
 from sklearn.metrics import mean_absolute_error, explained_variance_score
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, VotingRegressor
 from lightgbm import LGBMRegressor
 import lib.tickers as ticker_lists
 from lib.db import db_engine
-from joblib import dump, load
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 pd.set_option('mode.chained_assignment', None)
@@ -30,10 +29,9 @@ parser.add_argument('-v', '--verbose', default=1, help='Integer greater than zer
 parser.add_argument('-b', '--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
 parser.add_argument('-f', '--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
 parser.add_argument('-w', '--resample', default=f'W-{day_of_week}', help="Resampling window size. 'no' to turn off resampling, or any pandas-format resampling specification. Default: weekly resampling on current business day.")
-parser.add_argument('-g', '--grid-search', default=False, help='Enable grid search of hyperparameters. Default: disabled', action='store_true')
+parser.add_argument('-a', '--automl', default=False, help='Parameter search through hypopt. Default: disabled', action='store_true')
 parser.add_argument('-d', '--dump-data', default=False, help='Dump the datasets, predictions and results into parquet files. Default: False', action='store_true')
 parser.add_argument('-l', '--load-data', default=False, help='Load the datasets from the last dump. Default: False', action='store_true')
-parser.add_argument('-a', '--save-model', default=False, help='Save the trained model to a file. Default: False', action='store_true')
 parser.add_argument('-o', '--load-model', default=False, help='Load a trained model from a file. Default: False', action='store_true')
 parser.add_argument('-p', '--predict', default=False, help='Make predictions. Default: False', action='store_true')
 parser.add_argument('-e', '--save-predictions', default=False, help='Save predictions on test data to a CSV file. Default: False', action='store_true')
@@ -47,10 +45,9 @@ VERBOSE = int(parser.parse_args().verbose)
 LOOKBACK = int(parser.parse_args().lookback)
 LOOKFWD = int(parser.parse_args().lookfwd)
 RESAMPLE = parser.parse_args().resample
-GRID_SEARCH = parser.parse_args().grid_search
+AUTOML = parser.parse_args().automl
 DUMP_DATA = parser.parse_args().dump_data
 LOAD_DATA = parser.parse_args().load_data
-SAVE_MODEL = parser.parse_args().save_model
 LOAD_MODEL = parser.parse_args().load_model
 PREDICT = parser.parse_args().predict
 SAVE_PREDICTIONS = parser.parse_args().save_predictions
@@ -58,8 +55,9 @@ INTRADAY_PREDICTIONS = parser.parse_args().intraday_predictions
 
 FEATURE_SUBSAMPLE = 1.0
 MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individual ticker to bother calculating its alpha and making predictions
-STAMP = f"{MARKETS.replace(',', '-')}_{LOOKBACK}_{RESAMPLE}_{LOOKFWD}" # to be used in naming dataset & model dump files
+STAMP = f"{MARKETS.replace(',', '+')}-{LOOKBACK}-{RESAMPLE}-{LOOKFWD}" # to be used in naming dataset & model dump files
 TICKERS = ticker_lists.by_market([ f"'{m}'" for m in MARKETS.split(',')])
+model_file = f'{BASE_DIR}/models/{STAMP}.bin'
 
 print('Stox started on', TIMESTAMP, 'for', len(TICKERS), 'tickers in markets', MARKETS)
 print('resampling window:', RESAMPLE, 'Lookback:', LOOKBACK, 'Lookforward:', LOOKFWD)
@@ -103,47 +101,81 @@ print(  'X_train:', X_train.shape, 'X_test:', X_test.shape,
         'predictors:', predictors.shape, '-',
         round(100 * train_samples / total_samples), '/', round(100 * test_samples / total_samples), '% split')
 
-if not LOAD_MODEL:
-    LGB_params = {  'boosting_type': 'gbdt', 'colsample_bytree': 0.6,
-                    'min_child_samples': 20, 'min_child_weight': 0.001,
-                    'num_leaves': 63, 'learning_rate': 0.1,
-                    'reg_alpha': 0.001, 'reg_lambda': 1, 'objective': 'mae' }
-    common_params = { 'n_estimators': SIZE, 'random_state': SEED, 'verbose': VERBOSE, 'n_jobs': -1 }
+LGB_params = {  'boosting_type': 'gbdt', 'colsample_bytree': 0.6,
+                'min_child_samples': 20, 'min_child_weight': 0.001,
+                'num_leaves': 63, 'learning_rate': 0.1,
+                'reg_alpha': 0.001, 'reg_lambda': 1, 'objective': 'mae' }
 
-    model = LGBMRegressor(**LGB_params, **common_params)
+RFR_params = {  'max_features': 0.6, 'criterion': 'mse', # !
+                'min_samples_leaf': 20, 'min_samples_split': 2 }
 
-    if GRID_SEARCH:
-        from hypopt import GridSearch
-        param_grid = [{
-            #'n_estimators': [ SIZE ],
-            #'objective': [ 'mae' ],
-            #'boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
-            #'num_leaves': [ 31, 63, 127 ],
-            # 'learning_rate': [ 0.05, 0.1, 0.15 ],
-            # 'subsample_for_bin': [ 200000, 500000 ],
-            #'min_child_samples': [ 15, 20, 25 ],
-            #'min_child_weight': [ 0.001, 0.01, 0.1 ],
-            #'min_split_gain': [ 0.0, 0.001, 0.01 ],
-            #'colsample_bytree': [ 1.0, 0.9, 0.8, 0.7, 0.6 ],
-            #'reg_alpha': [ 0.001, 0.01, 0.1 ],
-            #'reg_lambda': [ 0.01, 0.1, 1],
-            'verbosity': [ 0 ],
-        }]
-        model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
+common_params = { 'n_estimators': SIZE, 'random_state': SEED, 'verbose': VERBOSE, 'n_jobs': -1 }
 
-    time_start_tr = perf_counter()
-
-    if not GRID_SEARCH:
-        model.fit(X_train, y_train)
-    else:
-        model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
-        print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
-        print('BEST MODEL:', model.best_estimator_, sep='\n')
-
-    if VERBOSE > 0:
-        print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
+if LOAD_MODEL:
+    model = load(model_file)
+    print('Model loaded from', model_file)
 else:
-    model = load(f'{BASE_DIR}/models/{STAMP}.bin')
+    model = VotingRegressor(estimators=[    ('lgb', LGBMRegressor(          **LGB_params, **common_params)),
+                                            # ('rfr', ExtraTreesRegressor(    **RFR_params, **common_params))
+                            ])
+
+if VERBOSE > 1:
+    print(model)
+
+time_start_tr = perf_counter()
+
+if AUTOML:
+    from hypopt import GridSearch
+    os.nice(19)
+
+    param_grid = [{
+        # --- LGBMRegressor options ---
+        'lgb__objective': [ 'mae' ],
+        # 'lgb__boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
+        'lgb__num_leaves': [ 31, 47, 63, 95, 111, 127 ],
+        'lgb__learning_rate': [ .01, .02, .03, .04, .05, .07, .10, .25 ],
+        # 'lgb__subsample_for_bin': [ 200000, 500000 ],
+        'lgb__min_child_samples': [ 13, 15, 17, 20, 23, 25, 28, 33 ],
+        'lgb__min_child_weight': [ 0.001, 0.01, 0.1 ],
+        'lgb__min_split_gain': [ 0.0, 0.001, 0.01 ],
+        'lgb__colsample_bytree': [ .90, .80, .70, .60, .50, .45 ],
+        'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
+        'lgb__reg_lambda': [ 0.01, 0.1, 1],
+
+        # --- RandomForestRegressor / ExtraTreesRegressor options ---
+        # 'rfr__max_features': [ .45, .52, .60, .69, 0.80 ],
+        # 'rfr__min_samples_leaf': [ 15, 17, 19, 21, 23 ],
+        # 'rfr__min_samples_split': [ 2, 3 ],
+        # 'rfr__max_depth': [ 15, 20, 25 ],
+
+        # --- common options ---
+        'lgb__n_estimators': [ common_params['n_estimators'] ],
+        # 'rfr__n_estimators': [ int(common_params['n_estimators'] / 2) ],
+
+        'lgb__random_state': [ common_params['random_state'] ],
+        # 'rfr__random_state': [ common_params['random_state'] ],
+
+        'lgb__verbose': [ 0 ],
+        # 'rfr__verbose': [ 0 ],
+
+        # --- VotingRegressor options ---
+        # 'weights':  [ [1/2, 1/2], [2/3, 1/3], [1/3, 2/3] ],
+    }]
+    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
+    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
+
+    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
+    model = model.best_estimator_
+
+if not LOAD_MODEL:
+    model.fit(X_train, y_train)
+
+if VERBOSE > 0 or AUTOML:
+    print('Training took', round(perf_counter() - time_start_tr, 2), 'seconds')
+
+if AUTOML:
+    dump(model, model_file, compress=True)
+    print('Model saved to', model_file)
 
 if hasattr(model, 'feature_importances_') and (VERBOSE > 0 or FEATURE_SUBSAMPLE < 1.0):
     fi = pd.DataFrame(model.feature_importances_, index=features, columns=['importance']).sort_values('importance', ascending=False)
@@ -160,9 +192,6 @@ if hasattr(model, 'feature_importances_') and (VERBOSE > 0 or FEATURE_SUBSAMPLE 
 
         model = LGBMRegressor(**LGB_params, **common_params)
         model.fit(X_train, y_train) # fit a new model on reduced set of features
-
-if SAVE_MODEL:
-    dump(model, f'{BASE_DIR}/models/{STAMP}.bin', compress=True)
 
 if PREDICT:
     results = pd.DataFrame()
