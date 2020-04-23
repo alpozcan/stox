@@ -138,24 +138,17 @@ if AUTOML:
         'lgb__min_child_samples': [ 13, 15, 17, 20, 23, 25, 28, 33 ],
         'lgb__min_child_weight': [ 0.001, 0.01, 0.1 ],
         'lgb__min_split_gain': [ 0.0, 0.001, 0.01 ],
-        'lgb__colsample_bytree': [ .90, .80, .70, .60, .50, .45 ],
+        'lgb__colsample_bytree': [ .45, .52, .60, .69, 0.80 ],
         'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
         'lgb__reg_lambda': [ 0.01, 0.1, 1],
+        'lgb__verbose': [ 0 ],
 
         # --- RandomForestRegressor / ExtraTreesRegressor options ---
         # 'rfr__max_features': [ .45, .52, .60, .69, 0.80 ],
         # 'rfr__min_samples_leaf': [ 15, 17, 19, 21, 23 ],
         # 'rfr__min_samples_split': [ 2, 3 ],
         # 'rfr__max_depth': [ 15, 20, 25 ],
-
-        # --- common options ---
-        'lgb__n_estimators': [ common_params['n_estimators'] ],
         # 'rfr__n_estimators': [ int(common_params['n_estimators'] / 2) ],
-
-        'lgb__random_state': [ common_params['random_state'] ],
-        # 'rfr__random_state': [ common_params['random_state'] ],
-
-        'lgb__verbose': [ 0 ],
         # 'rfr__verbose': [ 0 ],
 
         # --- VotingRegressor options ---
