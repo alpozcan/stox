@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-sqlcmd \
+/opt/mssql-tools/bin/sqlcmd \
 -S host \
 -U stox \
 -P stox \
