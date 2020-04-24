@@ -6,11 +6,11 @@ import pandas as pd
 import argparse, datetime, os, sys, psutil
 from time import perf_counter
 from joblib import dump, load
-from sklearn.metrics import mean_absolute_error, explained_variance_score
+from sklearn.metrics import mean_absolute_error, explained_variance_score, make_scorer
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, VotingRegressor
+from sklearn.model_selection import GridSearchCV
 from lightgbm import LGBMRegressor
 import lib.tickers as ticker_lists
-from lib.model_selection import GridSearch
 from lib.db import db_engine
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -59,6 +59,9 @@ MIN_TEST_SAMPLES = 10 # minimum number of test samples required for an individua
 STAMP = f"{MARKETS.replace(',', '+')}-{LOOKBACK}-{RESAMPLE}-{LOOKFWD}" # to be used in naming dataset & model dump files
 TICKERS = ticker_lists.by_market([ f"'{m}'" for m in MARKETS.split(',')])
 model_file = f'{BASE_DIR}/models/{STAMP}.bin'
+
+def alpha(y_true, y_pred):
+    return (abs(y_true).mean() / mean_absolute_error(y_true, y_pred) - 1) * 100
 
 print('Stox started on', TIMESTAMP, 'for', len(TICKERS), 'tickers in markets', MARKETS)
 print('resampling window:', RESAMPLE, 'Lookback:', LOOKBACK, 'Lookforward:', LOOKFWD)
@@ -135,12 +138,12 @@ if AUTOML:
         'lgb__num_leaves': [ 31, 47, 63, 95, 111, 127 ],
         'lgb__learning_rate': [ .01, .02, .03, .04, .05, .07, .10, .15, .25 ],
         # 'lgb__subsample_for_bin': [ 200000, 500000 ],
-        'lgb__min_child_samples': [ 13, 15, 17, 20, 22, 25, 28, 33 ],
-        'lgb__min_child_weight': [ 0.001, 0.01, 0.1 ],
-        'lgb__min_split_gain': [ 0.0, 0.001, 0.01 ],
-        'lgb__colsample_bytree': [ .45, .52, .60, .69, 0.80 ],
-        'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
-        'lgb__reg_lambda': [ 0.01, 0.1, 1],
+        # 'lgb__min_child_samples': [ 13, 15, 17, 20, 22, 25, 28, 33 ],
+        # 'lgb__min_child_weight': [ 0.001, 0.01, 0.1 ],
+        # 'lgb__min_split_gain': [ 0.0, 0.001, 0.01 ],
+        # 'lgb__colsample_bytree': [ .45, .52, .60, .69, 0.80 ],
+        # 'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
+        # 'lgb__reg_lambda': [ 0.01, 0.1, 1],
         'lgb__verbose': [ 0 ],
 
         # --- RandomForestRegressor / ExtraTreesRegressor options ---
@@ -154,10 +157,16 @@ if AUTOML:
         # --- VotingRegressor options ---
         # 'weights':  [ [1/2, 1/2], [2/3, 1/3], [1/3, 2/3] ],
     }]
-    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
-    model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
 
-    print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
+    X_merged = pd.concat([X_train, X_test], sort=False).values
+    y_merged = pd.concat([y_train, y_test], sort=False).values
+    scorer = make_scorer(alpha, greater_is_better=True)
+    cv = [( list(range(train_samples)), list(range(train_samples, total_samples)) )]
+    model = GridSearchCV(estimator=model, param_grid=param_grid, cv=cv, scoring=scorer, verbose=2)
+    model.fit(X_merged, y_merged)
+
+    print('BEST PARAMETERS:', model.best_params_(), sep='\n')
+    print('BEST SCORE:', model.best_score_, str(model.scorer_))
     model = model.best_estimator_
 
 if not LOAD_MODEL:
@@ -229,11 +238,7 @@ if PREDICT:
     results.to_csv(f'{BASE_DIR}/results/{TIMESTAMP}.csv')
     results.reset_index().to_sql(STAMP, if_exists='replace', schema='results', index=False, con=db_engine())
 
-# Calculate and print prediction results on the test data
-predictions_on_test = model.predict(X_test)
-volatility_on_test = round(abs(y_test).mean(), 4)
-error_on_test = round(mean_absolute_error(y_test, predictions_on_test), 4)
-print('Overall volatility:', volatility_on_test, ', error:', error_on_test, ', alpha:', round((volatility_on_test / error_on_test - 1) * 100, 2))
+print(' Overall alpha:', alpha(y_test , model.predict(X_test)))
 
 if SAVE_PREDICTIONS:
     y_test = pd.concat([y_test, pd.DataFrame(predictions_on_test, index=y_test.index)], axis=1)
