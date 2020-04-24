@@ -5,7 +5,6 @@ pyodbc
 SQLAlchemy
 lightgbm
 TA-Lib
-hypopt
 tqdm
 jupyter
 matplotlib

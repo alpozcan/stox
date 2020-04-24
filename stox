@@ -10,6 +10,7 @@ from sklearn.metrics import mean_absolute_error, explained_variance_score
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, VotingRegressor
 from lightgbm import LGBMRegressor
 import lib.tickers as ticker_lists
+from lib.model_selection import GridSearch
 from lib.db import db_engine
 
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -26,7 +27,7 @@ parser.add_argument('-s', '--split-date', default='2016-01-01', help='Train/Test
 parser.add_argument('-t', '--size', default=200, help='Number of estimator trees to build. Default: 200.')
 parser.add_argument('-r', '--seed', default=6, help='Seed for initialising the model weights with')
 parser.add_argument('-v', '--verbose', default=1, help='Integer greater than zero. Greater this number, more info is printed during run. Default: 1.')
-parser.add_argument('-b', '--lookback', default=6, help='The number of periods for look-back features. Default: 6.')
+parser.add_argument('-b', '--lookback', default=7, help='The number of periods for look-back features. Default: 7.')
 parser.add_argument('-f', '--lookfwd', default=1, help='The number of periods into the future to predict at. Default: 1.')
 parser.add_argument('-w', '--resample', default=f'W-{day_of_week}', help="Resampling window size. 'no' to turn off resampling, or any pandas-format resampling specification. Default: weekly resampling on current business day.")
 parser.add_argument('-a', '--automl', default=False, help='Parameter search through hypopt. Default: disabled', action='store_true')
@@ -125,23 +126,23 @@ if VERBOSE > 1:
 time_start_tr = perf_counter()
 
 if AUTOML:
-    from hypopt import GridSearch
     os.nice(19)
 
     param_grid = [{
         # --- LGBMRegressor options ---
-        'lgb__objective': [ 'mae' ],
+        # 'lgb__objective': [ 'mae' ],
         # 'lgb__boosting_type': [ 'gbdt', 'dart', 'goss' ], # 'rf' was broken
         'lgb__num_leaves': [ 31, 47, 63, 95, 111, 127 ],
-        'lgb__learning_rate': [ .01, .02, .03, .04, .05, .07, .10, .25 ],
+        'lgb__learning_rate': [ .01, .02, .03, .04, .05, .07, .10, .15, .25 ],
         # 'lgb__subsample_for_bin': [ 200000, 500000 ],
-        'lgb__min_child_samples': [ 13, 15, 17, 20, 23, 25, 28, 33 ],
+        'lgb__min_child_samples': [ 13, 15, 17, 20, 22, 25, 28, 33 ],
         'lgb__min_child_weight': [ 0.001, 0.01, 0.1 ],
         'lgb__min_split_gain': [ 0.0, 0.001, 0.01 ],
         'lgb__colsample_bytree': [ .45, .52, .60, .69, 0.80 ],
         'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
         'lgb__reg_lambda': [ 0.01, 0.1, 1],
         'lgb__verbose': [ 0 ],
+        'lgb__n_jobs': [ 1 ],
 
         # --- RandomForestRegressor / ExtraTreesRegressor options ---
         # 'rfr__max_features': [ .45, .52, .60, .69, 0.80 ],
@@ -150,11 +151,12 @@ if AUTOML:
         # 'rfr__max_depth': [ 15, 20, 25 ],
         # 'rfr__n_estimators': [ int(common_params['n_estimators'] / 2) ],
         # 'rfr__verbose': [ 0 ],
+        # 'rfr__n_jobs': [ 1 ],
 
         # --- VotingRegressor options ---
         # 'weights':  [ [1/2, 1/2], [2/3, 1/3], [1/3, 2/3] ],
     }]
-    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
+    model = GridSearch(model=model, param_grid=param_grid, parallelize=True, seed=SEED)
     model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
 
     print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
