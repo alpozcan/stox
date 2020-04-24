@@ -142,7 +142,6 @@ if AUTOML:
         'lgb__reg_alpha': [ 0.001, 0.01, 0.1 ],
         'lgb__reg_lambda': [ 0.01, 0.1, 1],
         'lgb__verbose': [ 0 ],
-        'lgb__n_jobs': [ 1 ],
 
         # --- RandomForestRegressor / ExtraTreesRegressor options ---
         # 'rfr__max_features': [ .45, .52, .60, .69, 0.80 ],
@@ -151,12 +150,11 @@ if AUTOML:
         # 'rfr__max_depth': [ 15, 20, 25 ],
         # 'rfr__n_estimators': [ int(common_params['n_estimators'] / 2) ],
         # 'rfr__verbose': [ 0 ],
-        # 'rfr__n_jobs': [ 1 ],
 
         # --- VotingRegressor options ---
         # 'weights':  [ [1/2, 1/2], [2/3, 1/3], [1/3, 2/3] ],
     }]
-    model = GridSearch(model=model, param_grid=param_grid, parallelize=True, seed=SEED)
+    model = GridSearch(model=model, param_grid=param_grid, parallelize=False, seed=SEED)
     model.fit(X_train, y_train, X_test, y_test, scoring='neg_mean_absolute_error', verbose=True)
 
     print('BEST PARAMETERS:', model.get_best_params(), sep='\n')
