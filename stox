@@ -162,8 +162,11 @@ if not LOAD_MODEL:
         print('optimisation took', round((perf_counter() - time_start_opt) / 3600), 'hours')
         print('BEST PARAMETERS:', model.best_params_, sep='\n')
         print('alpha (optimised):', model.best_score_)
-        dump(model.best_estimator_, model_file, compress=True)
-        print('model saved to', model_file)
+        new_model_file = model_file[:-4] + '_' + str(model.best_score_) + model_file[-4:]
+        dump(model.best_estimator_, new_model_file, compress=True)
+        print('model saved to', new_model_file)
+        os.remove(model_file)
+        os.symlink(new_model_file, model_file)
 else:
         model = load(model_file)
         print('Model loaded from', model_file)
