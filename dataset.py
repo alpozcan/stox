@@ -13,7 +13,6 @@ from lib.suppress_stdout_stderr import suppress_stdout_stderr
 import pyodbc
 from fbprophet import Prophet
 from datetime import datetime
-from tqdm import tqdm
 
 logging.getLogger('fbprophet').setLevel(logging.WARNING)
 
@@ -255,7 +254,7 @@ class DataSet:
     def multi_ts_data(self):
         """ Multiprocessing wrapper for quickly reading data for multiple tickers """
         pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-        ds = pd.concat(tqdm(pool.imap(self.ts_data, self.tickers), total=len(self.tickers)), sort=False)
+        ds = pd.concat(pool.map(self.ts_data, self.tickers), sort=False)
         pool.close()
         pool.join()
 

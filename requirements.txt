@@ -1,11 +1,10 @@
 numpy
 pandas
-scikit-learn==0.21.3
+scikit-learn
 pyodbc
 SQLAlchemy
 lightgbm
 TA-Lib
-tqdm
 jupyter
 matplotlib
 psutil
